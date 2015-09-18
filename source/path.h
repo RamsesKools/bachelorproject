@@ -95,11 +95,11 @@
     a.y -= b.y*rint(a.y/b.y);\
     a.z -= b.z*rint(a.z/b.z);}
 
-#define NPART 12
+#define NPART 2
 #define NSITES 20
-#define MAXSLICES 300000
-#define MAXSTATES 3
-#define MAXREPLICA 60
+#define MAXSLICES 500000
+#define MAXSTATES 2
+#define MAXREPLICA 15
 #define MAXSETS 0
 #define NACC 4
 #define NSTAT 2
@@ -269,10 +269,11 @@ typedef struct replica_type {
                   index, 
                   swapindex,
                   ntotal,
-                  avlen,
-                  avlensq,
                   navlen,
                   type;  
+
+    long int      avlen,
+                  avlensq;
 
     Dop           dop;
 

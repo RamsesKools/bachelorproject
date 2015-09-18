@@ -343,7 +343,7 @@ void print_pathnumbers() {
         for (k=0;k<MAXREPLICA;k++) { 
             printf("     Path length replica %2d ",k); 
             for (i=0;i<path.nstates;i++) { 
-                printf("%6.1lf ",(double) state[i].srep[k].avlen/state[i].srep[k].navlen);
+                printf("%6.1lf ",(double) state[i].srep[k].avlen/(double)state[i].srep[k].navlen);
             }
             printf("\n");
         }
@@ -432,6 +432,8 @@ void print_pathnumbers() {
             }  
             printf("\n");
         }
+
+        printf("\n\n");
 
 	}
 

@@ -88,7 +88,7 @@ void update_wanglandau() {
 
 void crossinghistogram(Replica *prep) {
 
-    int irep,type,i,imax,imin,ibin,k,maxrep,final_state,initial_state;
+    int irep,type,i,imax,imin,ibin,maxrep,final_state,initial_state;
 	double lambdamax,lambdamin,z,weight;
 	static int count;
   
@@ -135,27 +135,26 @@ void crossinghistogram(Replica *prep) {
     }
 
 	if(prep->index>0) {
-		final_state = path.final_state-1;
-		if(final_state<0) {
+		final_state = in_state(&slice[path.nslices-1]);
+		if(final_state<=0) {
             printf("Cross: final state unknown: %d\n", final_state); 
         }
-		state[state_index].pathtypenumbers[irep][final_state][maxrep]++;
+		state[state_index].pathtypenumbers[irep][final_state-1][maxrep]++;
 	}
 
-	k=irep;
-	imin = (int) (replica[k]->lambda*50);
+	imin = (int) (prep->lambda*50);
 	imax = (int) (lambdamax*50);
 
-	if(path.initial_state==path.nstates) {
+	if(path.initial_state==2) {
 		lambdamax= (lambdamax>0) ? (log(lambdamax) + 100) : 0 ;
 		imax = (int)(lambdamax*50);
-		lambdamin = (replica[k]->lambda >0) ? (log(replica[k]->lambda) +100) : 0;
+		lambdamin = (replica[irep]->lambda >0) ? (log(prep->lambda) +100) : 0;
 		imin = (int)(lambdamin*50);
 	}
 
 	for(i=imin;i<=imax;i++) {     
 		if((i>=0)&&(i<MAXBIN)) {
-			state[state_index].crosshist[k][i]++;
+			state[state_index].crosshist[irep][i]++;
 		}
 	}
   
@@ -304,7 +303,7 @@ void reweight_pathtypenumbers() {
 	double totpathtypes=0;
 	double ratematrix[MAXSTATES][MAXSTATES];
 	double sumdum,weight,norm,maxweight;
-	double value,maxvalue,maxlambda;
+	double value,maxvalue,minvalue,maxlambda;
 	double flux;
 	int maxrep,maxstate;
 	double weights[MAXREPLICA];
@@ -324,7 +323,6 @@ void reweight_pathtypenumbers() {
 		//set everything to zero to be sure
 		for(irep=1; irep<MAXREPLICA; irep++) {
 			nsum[irep]=0;
-			maxvalue=0;
 
 			for(jstate=0; jstate<MAXSTATES; jstate++) {
 				for(krep=1; krep<MAXREPLICA; krep++) {
@@ -350,10 +348,10 @@ void reweight_pathtypenumbers() {
 
 			//only allow numbers which have good statistics
 			for(jstate=0; jstate<path.nstates; jstate++) {
-				for(krep=1; krep<=state[istate].nrep; krep++) {
-					if(H[irep][jstate][krep]<0.1*maxvalue) {
-						H[irep][jstate][krep]=0;
-					}
+				for(krep=1; krep<state[istate].nrep; krep++) {
+					//if(H[irep][jstate][krep]<0.005*maxvalue) {
+					//	H[irep][jstate][krep]=0;
+					//}
 					//nsum = Mi
 					nsum[irep]+=H[irep][jstate][krep];
 				}
@@ -540,6 +538,27 @@ void reweight_pathtypenumbers() {
 		//all states are reweighted
 		}
 
+		double totpaths[path.nstates];
+		double f0,f1;
+		sprintf(filename,"rpe_pathtypes/ratematrixnosym.dat");
+		fp=fopen(filename,"w");
+		for(istate=0; istate<path.nstates; istate++) {
+            totpaths[istate]=0;
+		    for(jstate=0; jstate<path.nstates; jstate++) {
+                totpaths[istate]+=pathnummatrix[istate][jstate];
+            }
+        }
+		for(istate=0; istate<path.nstates; istate++) {
+			f0 = (double)state[istate].flux0/state[istate].nflux0;		
+			f1 = (double)state[istate].flux0/state[istate].nflux0;		
+			flux = 1./(f0+f1);
+			//fprintf(fp,"%d ",istate+1);
+			for(jstate=0; jstate<path.nstates; jstate++) {
+				fprintf(fp,"%12.5g ", flux*pathnummatrix[istate][jstate]/totpaths[istate]);
+			}
+			fprintf(fp,"\n");
+		}
+		fclose(fp);
 
 
 
@@ -614,17 +633,15 @@ void reweight_pathtypenumbers() {
 		sprintf(filename,"rpe_pathtypes/histpathnum.dat");
 		fp=fopen(filename,"w");
 		for(ii=0; ii<path.nstates; ii++) {
-			fprintf(fp," \n");
 			for(istate=0; istate<path.nstates; istate++) fprintf(fp,"              %d",istate+1);
-			fprintf(fp,"\n");
 			jj=0;
 			for(istate=0; istate<path.nstates; istate++) {
 				fprintf(fp,"%d ",istate+1);
 				for(jstate=0; jstate<path.nstates; jstate++) {
-					fprintf(fp,"& %12.5g ", Hist[ii][jj]);
+					fprintf(fp,"%12.5g ", Hist[ii][jj]);
 					jj++;
 					}
-				fprintf(fp,"\\\\ \n");
+				fprintf(fp,"\n");
 				}
 			}
 		fclose(fp);
@@ -648,10 +665,10 @@ void reweight_pathtypenumbers() {
 		for(istate=0; istate<path.nstates; istate++) {
 			fprintf(fp,"%d ",istate+1);
 			for(jstate=0; jstate<path.nstates; jstate++) {
-				fprintf(fp,"& %12.5g ", sumstatesH[jj]);
+				fprintf(fp,"%12.5g ", sumstatesH[jj]);
 				jj++;
 				}
-			fprintf(fp,"\\\\ \n");
+			fprintf(fp,"\n");
 			}
 		fprintf(fp,"\n\n");
 		for(istate=0; istate<(path.nstates*path.nstates); istate++) {
@@ -667,7 +684,7 @@ void reweight_pathtypenumbers() {
 
 		difference=1000;
 		iteration=0;
-		while((difference>0.0000001) && (iteration<10000000)) {
+		while((difference>0.0000001) && (iteration<100000000)) {
 
 			for(istate=0; istate<(path.nstates); istate++) {
 				Znew=0;
@@ -757,8 +774,10 @@ void reweight_pathtypenumbers() {
 
 		sprintf(filename,"rpe_pathtypes/stateweights.dat");
 		fp=fopen(filename,"w");
+        double sumweigths=0;
 		for(istate=0; istate<path.nstates; istate++) {
 			weightstate[istate]/=maxweight;
+            sumweigths+=weightstate[istate];
 			}
 
 		for(istate=0; istate<path.nstates; istate++) {
@@ -774,7 +793,6 @@ void reweight_pathtypenumbers() {
 
 
 		double statematrix[path.nstates][path.nstates];
-		double totpaths[path.nstates];
 		ii=0; 
 		for(istate=0; istate<path.nstates; istate++) {
 			totpaths[istate]=0;
@@ -785,7 +803,6 @@ void reweight_pathtypenumbers() {
 				}
 			}
 
-		double f0,f1;
 
 		sprintf(filename,"rpe_pathtypes/flux.dat");
 		fp=fopen(filename,"w");
@@ -808,10 +825,10 @@ void reweight_pathtypenumbers() {
 		for(istate=0; istate<path.nstates; istate++) {
 			fprintf(fp,"%d ",istate+1);
 			for(jstate=0; jstate<path.nstates; jstate++) {
-				fprintf(fp," %12.5g ", statematrix[istate][jstate]);
-				}
-			fprintf(fp,"\n");
+				fprintf(fp,"%12.5g ", statematrix[istate][jstate]);
 			}
+			fprintf(fp,"\n");
+		}
 		fclose(fp);
 
 
@@ -827,9 +844,9 @@ void reweight_pathtypenumbers() {
 			//fprintf(fp,"%d ",istate+1);
 			for(jstate=0; jstate<path.nstates; jstate++) {
 				fprintf(fp,"%12.5g ", flux*statematrix[istate][jstate]/totpaths[istate]);
-				}
-			fprintf(fp,"\n");
 			}
+			fprintf(fp,"\n");
+		}
 		fclose(fp);
 		//printf("wrote rate matrix\n");
 
@@ -843,9 +860,9 @@ void reweight_pathtypenumbers() {
 			fprintf(fp,"%d ",istate+1);
 			for(jstate=0; jstate<path.nstates; jstate++) {
 				fprintf(fp,"& %12.5g ", flux*statematrix[istate][jstate]/totpaths[istate]);
-				}
-			fprintf(fp,"\\\\ \n");
 			}
+			fprintf(fp,"\\\\ \n");
+		}
 		fclose(fp);
 
 
@@ -937,7 +954,7 @@ void reweight_crosshist() {
 //calculate partition function
 		difference=1000;
 		iteration=0;
-		while((difference>0.0000001) && (iteration<10000)) {
+		while((difference>0.0000001) && (iteration<100000000)) {
 			for(irep=1; irep<nrep; irep++) {
 				Znew=0;
 				//integrate over all the bins
@@ -1073,7 +1090,7 @@ void reweight_crosshist() {
 		int ilambda;
 		double lambdarep;
 		for(irep=1; irep<state[istate].nrep; irep++) {
-			if(istate<8) {
+			if(istate!=2) {
 				ilambda=(int)(state[istate].srep[irep].lambda*50);
 				if(log(combinedH[ilambda])==log(combinedH[ilambda])) {
 					state[istate].srep[irep].logcrossprob = log(combinedH[ilambda]);

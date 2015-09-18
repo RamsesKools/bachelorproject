@@ -1,16 +1,16 @@
 Simulation
 sim_type          1
-start_type        0
+start_type        1
 graphics          0
-ncycle1           100
-ncycle2           100
+ncycle1           500
+ncycle2           500
 
 Potential
 sigma             1.0
 mobilityT         1.0
 mobilityR         3.0
 epsilonC          0.0
-epsilonP          10.0
+epsilonP          20.0
 epsilonN          0.0
 delta             20.0
 nsites            1
@@ -19,16 +19,16 @@ nsitesN           0
 System
 npart             2
 beta              1.0
-boxl              5.0
+boxl              4.0
 
 Path
 timestep          0.0001
 ninter            1
 
 TIS
-nshoot            100
-nrepswap          100
-nstateswap        100
-nreverse          100
+nshoot            10
+nrepswap          10
+nstateswap        10
+nreverse          10
 stateswapbias     1
 fixedbias         0

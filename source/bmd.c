@@ -16,6 +16,10 @@ double potential_energy(Slice *psl) {
     double phi_i,phi_j;
     int ipart,jpart,isite,jsite;
     tensor rotmati,rotmatj;
+
+    psl->energyT=0;
+    psl->energyN=0;
+    psl->rijdist=0;
   
     for( ipart=0; ipart<sys.npart; ipart++ )  {
         psi = &psl->pts[ipart];
@@ -29,53 +33,54 @@ double potential_energy(Slice *psl) {
         psi = &psl->pts[ipart];
         for( jpart=0; jpart<ipart; jpart++ ) {
             psj = &psl->pts[jpart];
-            //calculate isotropic potential
             vector_minus(psi->r,psj->r,rij);
             pbc(rij,sys.boxl);
             r2 = vector_inp(rij,rij);
-            r6 = r2*r2*r2;
-            r6inv=1.0/r6;
-            r12inv = r6inv*r6inv;
-            if(r2<sys.sigmaLJsq) {
-                potential_energy_rep = r12inv-r6inv+0.25; 
-                //if(potential_energy_rep>1000) {
-                //    printf("Warning: ipart %d jpart %d energy %lf distance %lf\n",ipart,jpart,potential_energy_rep,r2);
-                //}
-            }
-            potential_energy_attC += r12inv-r6inv; 
-            r=sqrt(r2);
-            scalar_divide(rij,r,rnorm);
-            //calculate angular part of potential
-            for( isite=0; isite<sys.nsites; isite++ ) {
-                cositheta=-vector_inp(rnorm,p[ipart][isite]); 
-                if(cositheta<sys.cosdelta) {
-                    continue;
+            psl->rijdist=r2;
+            if(r2<4.0) {
+                r6 = r2*r2*r2;
+                r6inv=1.0/r6;
+                r12inv = r6inv*r6inv;
+                if(r2<sys.sigmaLJsq) {
+                    potential_energy_rep = r12inv-r6inv+0.25; 
                 }
-                phi_i=0.5*(1.0-cos(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta));
-                for( jsite=0; jsite<sys.nsites; jsite++ ) {
-                    cosjtheta=vector_inp(rnorm,p[jpart][jsite]);
-                    if(cosjtheta<sys.cosdelta) {
+                //calculate isotropic potential
+                //potential_energy_attC += r12inv-r6inv; 
+                r=sqrt(r2);
+                psl->rijdist = r;
+                scalar_divide(rij,r,rnorm);
+                //calculate angular part of potential
+                for( isite=0; isite<sys.nsites; isite++ ) {
+                    cositheta=-vector_inp(rnorm,p[ipart][isite]); 
+                    if(cositheta<sys.cosdelta) {
                         continue;
                     }
-                    
-                    phi_j=0.5*(1.0-cos(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta));
-                    potential_energy_attP_d = phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps); //Berthelot mixing rule is used for determining epsilon
-                    
-                    //bewaar door welke patches de potentiele energie tot stand komt:
-                    // 
-                    if( isite==0 && jsite==0) {
-                         psl->energyT = potential_energy_attP_d;
+                    phi_i=0.5*(1.0-cos(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta));
+                    for( jsite=0; jsite<sys.nsites; jsite++ ) {
+                        cosjtheta=vector_inp(rnorm,p[jpart][jsite]);
+                        if(cosjtheta<sys.cosdelta) {
+                            continue;
+                        }
+                        
+                        phi_j=0.5*(1.0-cos(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta));
+                        //Berthelot mixing rule is used for determining epsilon
+                        //potential_energy_attP_d = 4.0*phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps); 
+                        potential_energy_attP_d = -4.0 * phi_i * phi_j * r6inv * sqrt(sys.site[isite].eps * sys.site[jsite].eps); 
+                        
+                        //bewaar door welke patches de potentiele energie tot stand komt:
+                        if( (isite==0) && (jsite==0)) {
+                             psl->energyT = potential_energy_attP_d;
+                        }
+                        else {
+                            psl->energyN = potential_energy_attP_d;
+                            psl->minisite = isite;
+                            psl->minjsite = jsite;
+                        }
+                        potential_energy_attP_d = 4.0*phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps); 
+
+                        potential_energy_attP += potential_energy_attP_d;
 
                     }
-                    else {
-                        psl->energyN = potential_energy_attP_d;
-                        psl->minisite = isite;
-                        psl->minjsite = jsite;
-
-                    }
-
-                    potential_energy_attP += potential_energy_attP_d;
-
                 }
             }
         }
@@ -83,11 +88,12 @@ double potential_energy(Slice *psl) {
 
     potential_energy_rep*=4.0;
     
-    potential_energy_attP*=4.0;//*sys.epsilonP; // dit wordt nu in de loop al gedaan
+    //potential_energy_attP*=4.0;//*sys.epsilonP; // dit wordt nu in de loop al gedaan
 
-    potential_energy_attC*=4.0*sys.epsilonC;
+    //potential_energy_attC*=4.0*sys.epsilonC;
 
-    potential_energy = potential_energy_rep + potential_energy_attC + potential_energy_attP;
+    //potential_energy = potential_energy_rep + potential_energy_attC + potential_energy_attP;
+    potential_energy = potential_energy_rep + potential_energy_attP;
 
     return potential_energy;
 }

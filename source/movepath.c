@@ -10,18 +10,15 @@ void create_all_rc(Slice *psl) {
 
     //bound energies (bound state), non-specific energies (non-specific state), or system energy (unbound state) are calculated in potential_energy()
 
-    potential_energy(psl);
+    psl->energy = potential_energy(psl);
     //for target state: use only energies for target patches
     if(path.initial_state==1) {
-        if(psl->rijdist >= sys.sigmaLJ) {
-            psl->order_parameter = psl->energyT - path.current_gsen;
-        }
-        return;
+        psl->order_parameter = psl->energyT - path.current_gsen;
     }
 
     //for unbound state: use entire potential energy
     else if(path.initial_state==2) {
-        psl->order_parameter = -psl->energy; //hier ben ik niet zeker over!
+        psl->order_parameter = -psl->energy;
     }
 
     //for non-specific state: use only energies for non-specific patches
@@ -29,7 +26,6 @@ void create_all_rc(Slice *psl) {
         if(psl->rijdist >= sys.sigmaLJ) {
             psl->order_parameter = psl->energyN - path.current_gsen;
         }
-        return;
     }
 
     return;
@@ -73,9 +69,11 @@ int in_state(Slice *psl) {
         return 2;
     }
 
-    //return 3 if in state 3, the non-specific state
-    if ((psl->energyN + sqrt(sys.site[psl->minisite].eps*sys.site[psl->minjsite].eps)) < state[2].volume_op) {
-        return 3;
+    if(path.nstates>2) {
+        //return 3 if in state 3, the non-specific state
+        if ((psl->energyN + sqrt(sys.site[psl->minisite].eps*sys.site[psl->minjsite].eps)) < state[2].volume_op) {
+            return 3;
+        }
     }
 
     return 0;
@@ -107,14 +105,10 @@ int trajectory(Slice *psl, int maxlength) {
 
 int in_upper_window(Slice *psl, Replica *prep, int state_index) {
 
-    int in;
-    double energy;
-
-    energy =get_rc(psl);
-    
-    in = (energy>prep->lambda);
-        
-    return in; 
+    //printf("in upper window\n");
+    //printf("psl op %lf\n",psl->order_parameter);
+    //printf("prep lambda %lf\n",prep->lambda);
+    return (psl->order_parameter > prep->lambda);
 }
 
 
@@ -269,7 +263,10 @@ int shoot_oneway(Replica *prep)
     
     trial_pathlen = index+len+1;
     if(trial_pathlen<3) {
-        printf("path is too short: %d\n",trial_pathlen);
+        printf("path is too short: %d, state %d\n",trial_pathlen,path.initial_state);
+        for(i=0; i<path.nslices; i++) {
+            print_rc(&slice[i],path.initial_state);
+        }
         return 0;
     }
 
@@ -555,6 +552,10 @@ int swap_states(int irep,int jrep) {
     Replica *prepi,*prepj;
     int i,j,initial_state,final_state,pathlen,type,start,index,maxlength,len;
     double aux;
+
+    if(path.current_replica!=(state[path.initial_state-1].nrep-1)) {
+        return 0;
+    }
     
     if(path.stateswapbias==2) {
         state[path.initial_state-1].dos+=path.scalefactor;
@@ -593,19 +594,19 @@ int swap_states(int irep,int jrep) {
 
     path.block_stats[path.initial_state-1][prepi->index].mcacc[2].tries++;
 
-    //pick random replica of the final state;
-    jrep = (int)(RandomNumber()*(state[final_state-1].nrep-1)) +1;
-    if(jrep==0) {
-        printf("Warning swap states: jrep is 0, should at least be 1\n");
-    }
-    prepj=&state[final_state-1].srep[jrep];  
-    
-    //jrep = state[final_state-1].nrep-1;
+    ////pick random replica of the final state;
+    //jrep = (int)(RandomNumber()*(state[final_state-1].nrep-1)) +1;
+    //if(jrep==0) {
+    //    printf("Warning swap states: jrep is 0, should at least be 1\n");
+    //}
     //prepj=&state[final_state-1].srep[jrep];  
     
+    jrep = state[final_state-1].nrep-1;
+    prepj =&state[final_state-1].srep[jrep];  
+    
     double nrepratio;
-    nrepratio = (double)(state[final_state-1].nrep-1.)/(double)(state[initial_state-1].nrep-1.);
-    //nrepratio=1;
+    //nrepratio = (double)(state[final_state-1].nrep-1.)/(double)(state[initial_state-1].nrep-1.);
+    nrepratio=1;
     if(path.stateswapbias==1) {
         aux = prepi->dos - prepj->dos;
         if (RandomNumber() > (nrepratio*exp(aux))) {

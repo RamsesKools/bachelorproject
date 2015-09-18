@@ -30,6 +30,7 @@ void setup_simulation() {
         fwtrial = (Slice *)calloc(MAXSLICES,sizeof(Slice));
         bwtrial = (Slice *)calloc(MAXSLICES,sizeof(Slice));
 
+        setup_positions(&slice[0]);
         read_lambda();
         state_init();
         replica_init();
@@ -112,46 +113,46 @@ void setup_positions(Slice *psl) {
     printf("Setting the positions for all the particles\n");
     //random configuration
     //
-    if(sys.start_type==0) {
-        if(sys.npart==1) {
-            printf("Only one particle: placing it at the centre\n");
-            psi=&psl->pts[0];
-            psi->r=nulvec;
-            psi->q=RandomQuaternion();
-        }
+    if(sys.npart==1) {
+        printf("Only one particle: placing it at the centre\n");
+        psi=&psl->pts[0];
+        psi->r=nulvec;
+        psi->q=RandomQuaternion();
+    }
 
-        else if(sys.npart==2) {
-            printf("Only two particles: placing them towards each other\n");
-            for( ipart=0; ipart<sys.npart; ipart++ ) {
-                psi=&psl->pts[ipart];
-                psi->r=nulvec;
-                psi->r.z -= 0.5 - sys.sigmaLJ*ipart*sys.sigma;
-                //psi->q=RandomQuaternion();
-                if(ipart==0) {
-                    psi->q.q0 = 0.0;
-                    psi->q.q1 = 0.0;
-                    psi->q.q2 = 0.0;
-                    psi->q.q3 = 1.0;
-                }
-                if(ipart==1) {
-                    psi->q.q0 = 0.0;
-                    psi->q.q1 = 1.0;
-                    psi->q.q2 = 0.0;
-                    psi->q.q3 = 0.0;
-                }
+    else if(sys.npart==2) {
+        printf("Only two particles: placing them towards each other\n");
+        for( ipart=0; ipart<sys.npart; ipart++ ) {
+            psi=&psl->pts[ipart];
+            psi->r=nulvec;
+            psi->r.z -= 0.5 - sys.sigmaLJ*ipart*sys.sigma;
+            //psi->q=RandomQuaternion();
+            if(ipart==0) {
+                psi->q.q0 = 0.0;
+                psi->q.q1 = 0.0;
+                psi->q.q2 = 0.0;
+                psi->q.q3 = 1.0;
+            }
+            if(ipart==1) {
+                psi->q.q0 = 0.0;
+                psi->q.q1 = 1.0;
+                psi->q.q2 = 0.0;
+                psi->q.q3 = 0.0;
             }
         }
+    }
     
+
+
+    if(sys.sim_type==0) {
+        if(sys.start_type==1) {
+            printf("Reading from conf.inp\n");
+            conf_input(&slice[0]);
+        }
     }
 
 
-    else if(sys.start_type==1) {
-        printf("Reading from conf.inp\n");
-        conf_input(&slice[0]);
-    }
-
-
-    else {
+    if(sys.start_type==3) {
         printf("Randomly placing particles with random orientation\n");
         for( ipart=0; ipart<sys.npart; ipart++) {
             psi=&psl->pts[ipart];
@@ -356,13 +357,38 @@ void print_input(void) {
 void state_init() {
 
     //define the state volume boundaries
+    int islice,ipart;
+    Pts *psi;
+
+    printf("\nDefining state defintions\n");
 
     path.initial_state=1;
     path.nstates=2;
 
+    printf("Only two particles: placing them towards each other\n");
+    for( ipart=0; ipart<sys.npart; ipart++ ) {
+        psi=&slice[0].pts[ipart];
+        psi->r=nulvec;
+        psi->r.z -= 0.5 - sys.sigmaLJ*ipart*sys.sigma;
+        //psi->q=RandomQuaternion();
+        if(ipart==0) {
+            psi->q.q0 = 0.0;
+            psi->q.q1 = 0.0;
+            psi->q.q2 = 0.0;
+            psi->q.q3 = 1.0;
+        }
+        if(ipart==1) {
+            psi->q.q0 = 0.0;
+            psi->q.q1 = 1.0;
+            psi->q.q2 = 0.0;
+            psi->q.q3 = 0.0;
+        }
+    }
 
-    state[0].target.energy = -sys.epsilonP; 
+
+
     //keep the state as small as possible
+    state[0].target.energy = -4.0*sys.epsilonP*(1.0/sys.sigmaLJsq)*(1.0/sys.sigmaLJsq)*(1.0/sys.sigmaLJsq); 
     state[0].volume_op = state[0].lambda[0];
     printf("Definition of bound state:\n");
     printf("         Ground-state energy:     %lf\n",state[0].target.energy);
@@ -371,8 +397,7 @@ void state_init() {
     printf("\n");
 
     state[1].target.energy = 0;
-    state[1].mindist = 2*sys.sigma;
-    //keep the state as small as possible
+    state[1].mindist = 4*sys.sigma*sys.sigma;
     state[1].volume_op = state[1].lambda[0];
     printf("Definition of unbound state:\n");
     printf("         Ground-state energy:     %lf\n",state[1].target.energy);
@@ -380,19 +405,24 @@ void state_init() {
     printf("         State volume set at:     %lf\n",state[1].volume_op);
     printf("\n");
     
-    // hier moet nog wat mee gebeuren denk ik ...???
-    //keep the state as small as possible
-    state[2].volume_op = state[2].lambda[0];
-    printf("Definition of non-specific state:\n");
-    printf("         Ground-state energy not set yet\n");
-    printf("         Maximum energy boundary not set yet\n");
-    printf("         State volume set at:     %lf\n",state[2].volume_op);
-    printf("\n");
+    if(path.nstates>2) {
+        state[2].volume_op = state[2].lambda[0];
+        printf("Definition of non-specific state:\n");
+        printf("         Ground-state energy not set yet\n");
+        printf("         Maximum energy boundary not set yet\n");
+        printf("         State volume set at:     %lf\n",state[2].volume_op);
+        printf("\n");
+    }
 
 
     path.current_gsen = state[path.initial_state-1].target.energy;
     create_all_rc(&(slice[0]));
+    for(islice=1; islice<MAXSLICES; islice++) {
+        slice[islice] = slice[0];
+    }
     print_rc(&(slice[0]),path.initial_state);
+
+    printf("\nDone defining state defintions\n");
 
     return;
 }
@@ -406,6 +436,9 @@ void replica_init() {
     int islice,istate,irep,jrep,pathlen,maxlength,len,type;
 
     //define interface volumes for every state
+
+
+    printf("Defining replicas, interfaces and bootstrapping initial path\n");
 
 
     printf("Replica definition per state:\n");
@@ -473,6 +506,8 @@ void read_lambda() {
     FILE *fplam;
     int irep;
 
+    printf("Reading interface values from lambda_b.inp, lambda_u.inp, lambda_n.inp\n");
+
 
     if((fplam = fopen("lambda_b.inp","r"))==NULL){
         printf("Warning: lambda_Ih.inp not found\n");
@@ -508,6 +543,7 @@ void read_lambda() {
         fclose(fplam);
     }
 
+    printf("Done reading interface values\n");
 
     return;
 }
@@ -620,13 +656,13 @@ void traj_input() {
     char dum[40];
     char filename[100];
     FILE *fp;
-    int i,j;
+    int i,j,type;
 	Slice *psl;
 
 	printf("\nIn traj_input()\n");
 	printf("Reading in previous trajectory\n");
  
-    sprintf(filename,"traj.inp");
+    sprintf(filename,"trajectory.inp");
     if ((fp = fopen(filename,"r"))==NULL){
         printf("input: can't open %s\n",filename);
         return;
@@ -647,29 +683,53 @@ void traj_input() {
     }  
 
 
+    //retrieve all additional TIS parameters from read input
+    path.nreplica = state[path.initial_state-1].nrep;
+	for(i=0; i<path.nreplica; i++) {
+		replica[i] = &state[path.initial_state-1].srep[i];
+	}
+
+
+    if(path.initial_state == 1 || path.initial_state==2) {
+	    path.current_gsen = state[path.initial_state-1].target.energy;
+    }
+    //add similar as above for nonfunctional state!!!!
+
     for(i=0;i<path.nslices;i++) {
         psl = &(slice[i]);
-        create_all_rc(&slice[i]);
+        create_all_rc(psl);
+        printf("Slice %d  op %lf state %d energyT %lf rijdist %lf energyN %lf energy %lf inwindow %d\n", 
+         i, 
+         psl->order_parameter, 
+         in_state(psl),
+         psl->energyT,
+         psl->rijdist,
+         psl->energyN,
+         psl->energy,
+         in_upper_window(psl,replica[path.current_replica],path.initial_state));
     }
+    path.final_state = in_state(&slice[path.nslices-1]);
+
+    if(path.current_replica==0) {
+        type =analyse_state_i(slice,replica[path.current_replica],path.nslices, path.initial_state);
+    }
+    else {
+        type =analyse(slice,replica[path.current_replica],path.nslices, path.initial_state);
+    }
+    replica[path.current_replica]->pathlen=path.nslices;
+    replica[path.current_replica]->type=type;
 
 
-	path.current_gsen = state[path.initial_state-1].target.energy;
     printf("Warm start information:\n");
     printf("       number of slices:       %d\n",path.nslices);
     printf("       initial state:          %d\n",in_state(&slice[0]));
     printf("       middle state:           %d\n",in_state(&slice[(int)(path.nslices/2.0)]));
     printf("       final state:            %d\n",in_state(&slice[path.nslices-1]));
-    printf("       current initial state:  %lf\n",path.current_gsen);
-    printf("       current replica:        %lf\n",path.current_gsen);
+    printf("       current initial state:  %d\n",path.initial_state);
+    printf("       current replica:        %d\n",path.current_replica);
     printf("       current gsen:           %lf\n",path.current_gsen);
+    printf("       type of path:           %d\n",type);
         
-
-	for(i=0; i<path.nreplica; i++) {
-		replica[i] = &state[path.initial_state-1].srep[i];
-	}
-
-    replica[path.current_replica]->pathlen=path.nslices;
-  
 	printf("Done with traj_input\n\n");
 
     return;
@@ -767,6 +827,22 @@ void dos_output() {
         }
         fclose(fp);
     }
+
+
+    if ((fp = fopen("dos_lambda.dat","w"))==NULL){
+        printf("output: can't open file.dat\n");
+        return;
+    }
+    else {
+        for(i=0;i<path.nstates;i++) {
+            for(j=1;j<state[i].nrep;j++) {
+                fprintf(fp,"%lf %g\n",state[i].srep[j].lambda,state[i].srep[j].dos-state[i].srep[1].dos);
+            }
+            fprintf(fp,"\n");
+        }
+        fclose(fp);
+    }
+
 	
     return;
 }

@@ -27,15 +27,15 @@ int     Run  = FALSE;           /* Run flag */
 int     Drawall =3;          /* Draw flag*/
 
 
-Particle *pos;                   /* Storage of positions, etc */
+Particle pos[NPART];                   /* Storage of positions, etc */
 vector  Boxl;                   /* Size of the periodic box */
 vector  *Circle=NULL;
 
 
-float	Far = 200.0;		/* The far clipping plane */
+float   Far = 200.0;        /* The far clipping plane */
 float   Boxdistance =1.25;
-float	Distance = -10;		/* Distance, Azimuth, Inclination and Twist */
-GLfloat	xRotation = -90,		/* define the viewing position */
+float   Distance = -10;     /* Distance, Azimuth, Inclination and Twist */
+GLfloat xRotation = -90,        /* define the viewing position */
         yRotation = 0,
         zRotation = 0;
 char string[] = "A";
@@ -43,10 +43,21 @@ char string[] = "A";
 
 struct glstattype {
   
-  int Animate,
-      BackwardAnimation,
-      OneUp            ,
-      OneDown;
+    int Animate,
+        BackwardAnimation,
+        Count,
+        Next,
+        Repeat,
+        Ncount,
+        Ninter,
+        Graphics,
+        MakeMovie,
+        NumSlices,
+        NumMovie,
+        OneUp,
+        OneDown;
+
+    double Sleeptime;
 
 } glstat;
 
@@ -54,11 +65,16 @@ struct glstattype {
 
 static float MaterialRed[]     =   { 0.7, 0.0, 0.0, 0.7 };
 static float MaterialGreen[]   =   { 0.1, 0.5, 0.2, 1.0 };
-static float MaterialBlue[]    =   { 0.0, 0.0, 0.7, 1.0 };
-static float MaterialSome[]    =   { 0.0, 0.7, 0.0, 1.0 };
+static float MaterialBlue[]    =   { 0.0, 0.0, 0.7, 0.7 };
 static float MaterialYellow[]  =   { 0.7, 0.7, 0.0, 1.0 };
 static float MaterialCyan[]    =   { 0., 0.7, 0.7, 1.0 };
 static float MaterialMagenta[]    =   { 0.7, 0., 0.7, 1.0 };
+static float MaterialSome[]    =   { 0.0, 0.7, 0.0, 1.0 };
+static float MaterialSome2[]    =   { 0.3, 0.7, 0.2, 1.0 };
+static float MaterialSome3[]    =   { 0.4, 0.2, 0.5, 1.0 };
+static float MaterialSome4[]    =   { 0.1, 0.1, 0.3, 1.0 };
+static float MaterialSome5[]    =   { 0.1, 0.7, 0.8, 1.0 };
+static float MaterialSome6[]    =   { 0.3, 0.3, 0.3, 1.0 };
 
 
 static float front_shininess[] =   {60.0};
@@ -205,17 +221,17 @@ void reset_center(Slice *psl) {
 
 vector findnorm(vector vec1, vector vec2, vector vec3) {
 
-	vector norm,edge1,edge2;
+    vector norm,edge1,edge2;
 
-	vector_minus(vec2,vec1,edge1);
-	vector_minus(vec3,vec1,edge2);
+    vector_minus(vec2,vec1,edge1);
+    vector_minus(vec3,vec1,edge2);
 
-	scalar_divide(edge1,sqrt(vector_inp(edge1,edge1)),edge1);
-	scalar_divide(edge2,sqrt(vector_inp(edge2,edge2)),edge2);
+    scalar_divide(edge1,sqrt(vector_inp(edge1,edge1)),edge1);
+    scalar_divide(edge2,sqrt(vector_inp(edge2,edge2)),edge2);
 
-	vector_cross(edge1,edge2,norm);
+    vector_cross(edge1,edge2,norm);
 
-	return norm;
+    return norm;
 }
 
 
@@ -244,55 +260,55 @@ void getdrawrotmatrix(quaternion q, float *mat) {
 
 quaternion quatVecToVec(vector vec1, vector vec2) {
 
-	quaternion qrot;
-	vector rotvec,xvec,yvec;
-	double angle,s,invs,l;
+    quaternion qrot;
+    vector rotvec,xvec,yvec;
+    double angle,s,invs,l;
 
-	angle=vector_inp(vec1,vec2);
-	if(angle>=1) {
-		qrot.q0=1;
-		qrot.q1=0;
-		qrot.q2=0;
-		qrot.q3=0;
-	}
+    angle=vector_inp(vec1,vec2);
+    if(angle>=1) {
+        qrot.q0=1;
+        qrot.q1=0;
+        qrot.q2=0;
+        qrot.q3=0;
+    }
 
-	else if(angle < -0.999999) {
-		//xvec.x=1;
-		//xvec.y=0;
-		//xvec.z=0;
-		//vector_cross(xvec,vec2,rotvec);	
-		//l=sqrt(vector_inp(rotvec,rotvec));
-		//if(l==0) {
-		//	yvec.x=0;
-		//	yvec.y=1;
-		//	yvec.z=0;
-		//	vector_cross(yvec,vec2,rotvec);
-		//	l=sqrt(vector_inp(rotvec,rotvec));
-		//}
-		//scalar_divide(rotvec,l,rotvec);
-		//qrot.r=PI;
-		//qrot.u=rotvec;
-		//scdivide_quat(qrot,sqrt(quat_inp(qrot,qrot)),qrot);
-		qrot.q0=0;
-		qrot.q1=0;
-		qrot.q2=1;
-		qrot.q3=0;
-	}
+    else if(angle < -0.999999) {
+        //xvec.x=1;
+        //xvec.y=0;
+        //xvec.z=0;
+        //vector_cross(xvec,vec2,rotvec);   
+        //l=sqrt(vector_inp(rotvec,rotvec));
+        //if(l==0) {
+        //  yvec.x=0;
+        //  yvec.y=1;
+        //  yvec.z=0;
+        //  vector_cross(yvec,vec2,rotvec);
+        //  l=sqrt(vector_inp(rotvec,rotvec));
+        //}
+        //scalar_divide(rotvec,l,rotvec);
+        //qrot.r=PI;
+        //qrot.u=rotvec;
+        //scdivide_quat(qrot,sqrt(quat_inp(qrot,qrot)),qrot);
+        qrot.q0=0;
+        qrot.q1=0;
+        qrot.q2=1;
+        qrot.q3=0;
+    }
 
-	else {
-		s=sqrt(2.*(1.+angle));	
-		invs=1./s;
-		vector_cross(vec1,vec2,rotvec);
-		qrot.q0=0.5*s;
-		scalar_times(rotvec,invs,rotvec);
-		qrot.q1=rotvec.x;
-		qrot.q2=rotvec.y;
-		qrot.q3=rotvec.z;
-		scdivide_quat(qrot,sqrt(quat_inp(qrot,qrot)),qrot);
-	}
-				
+    else {
+        s=sqrt(2.*(1.+angle));  
+        invs=1./s;
+        vector_cross(vec1,vec2,rotvec);
+        qrot.q0=0.5*s;
+        scalar_times(rotvec,invs,rotvec);
+        qrot.q1=rotvec.x;
+        qrot.q2=rotvec.y;
+        qrot.q3=rotvec.z;
+        scdivide_quat(qrot,sqrt(quat_inp(qrot,qrot)),qrot);
+    }
+                
 
-	return qrot;
+    return qrot;
 }
 
 
@@ -300,133 +316,144 @@ void drawPatch(int ind,int isite)
 
 {
 
-	int i;
-	float numTheta,numPhi;
-	float maxPhi;
+    int i;
+    float numTheta,numPhi;
+    float maxPhi;
     static float maxTheta;
     static int initial;
-	//maxTheta=sys.delta;
-	maxPhi=2.*PI;
-	numTheta=Precision+10;
-	numPhi=Precision+10;
-	int countfan;
+    //maxTheta=sys.delta;
+    maxPhi=2.*PI;
+    numTheta=Precision+10;
+    numPhi=Precision+10;
+    int countfan;
 
     if(initial==0) {
         initial=1;
         maxTheta = (180./PI)*acos(0.5+0.5*cos((PI/180.)*sys.delta));
     }
 
-	float theta = 0, phi = 0, deltaTheta = maxTheta / numTheta, deltaPhi = maxPhi / numPhi;
-	float z1, x1, y1, z2, x2, y2, z3, x3, y3, z4, x4, y4;
-	float anglerot;
-	quaternion qrot,qrot2;
-	vector zvec;
-	vector vec1,vec2,vec3,vec4;
-	vector norm,vecnorm1,vecnorm2;
-	float r = 0.5+0.02;
-	float matrix[16];
-	float sina;
-	vector vecfan[100];
+    float theta = 0, phi = 0, deltaTheta = maxTheta / numTheta, deltaPhi = maxPhi / numPhi;
+    float z1, x1, y1, z2, x2, y2, z3, x3, y3, z4, x4, y4;
+    float anglerot;
+    quaternion qrot,qrot2;
+    vector zvec;
+    vector vec1,vec2,vec3,vec4;
+    vector norm,vecnorm1,vecnorm2;
+    float r = 0.5+0.02;
+    float matrix[16];
+    float sina;
+    vector vecfan[100];
 
-	glPushMatrix();
+    glPushMatrix();
 
-	glDisable(GL_CULL_FACE);
-	glTranslatef(pos[ind].r.x, pos[ind].r.y, pos[ind].r.z);
+    glDisable(GL_CULL_FACE);
+    glTranslatef(pos[ind].r.x, pos[ind].r.y, pos[ind].r.z);
 
-	getdrawrotmatrix(pos[ind].q,matrix);
-	glMultMatrixf(matrix);
+    getdrawrotmatrix(pos[ind].q,matrix);
+    glMultMatrixf(matrix);
 
-	zvec.x=0;
-	zvec.y=0;
-	zvec.z=1;
-	qrot=quatVecToVec(zvec,sys.site[isite].r);
+    zvec.x=0;
+    zvec.y=0;
+    zvec.z=1;
+    qrot=quatVecToVec(zvec,sys.site[isite].r);
 
-	getdrawrotmatrix(qrot,matrix);
-	glMultMatrixf(matrix);
+    getdrawrotmatrix(qrot,matrix);
+    glMultMatrixf(matrix);
 
-	glBegin(GL_QUADS);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed);
+    glBegin(GL_QUADS);
 
-	countfan=0;
-	for(theta = 0; theta <= maxTheta ; theta += deltaTheta){
-		for(phi = 0; phi <= maxPhi; phi += deltaPhi){
-			x1 = r * sin(theta + deltaTheta) * cos(phi + deltaPhi);
-			y1 = r * sin(theta + deltaTheta) * sin(phi + deltaPhi);
-			z1 = r * cos(theta + deltaTheta);
+    if(isite==0) {
+        glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed);
+    }
+    else {
+        glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialBlue);
+    }
 
-			x2 = r * sin(theta) * cos(phi + deltaPhi);
-		 	y2 = r * sin(theta) * sin(phi + deltaPhi);
-			z2 = r * cos(theta);
+    countfan=0;
+    for(theta = 0; theta <= maxTheta ; theta += deltaTheta){
+        for(phi = 0; phi <= maxPhi; phi += deltaPhi){
+            x1 = r * sin(theta + deltaTheta) * cos(phi + deltaPhi);
+            y1 = r * sin(theta + deltaTheta) * sin(phi + deltaPhi);
+            z1 = r * cos(theta + deltaTheta);
 
-			x3 = r * sin(theta) * cos(phi);
-			y3 = r * sin(theta) * sin(phi);
-			z3 = r * cos(theta);
+            x2 = r * sin(theta) * cos(phi + deltaPhi);
+            y2 = r * sin(theta) * sin(phi + deltaPhi);
+            z2 = r * cos(theta);
 
-			x4 = r * sin(theta + deltaTheta) * cos(phi);
-			y4 = r * sin(theta + deltaTheta) * sin(phi);
-			z4 = r * cos(theta + deltaTheta);
+            x3 = r * sin(theta) * cos(phi);
+            y3 = r * sin(theta) * sin(phi);
+            z3 = r * cos(theta);
 
-			if(theta>(maxTheta-deltaTheta)) {
-				vecfan[countfan].x=x1;
-				vecfan[countfan].y=y1;
-				vecfan[countfan].z=z1;
-				countfan++;
-			}
+            x4 = r * sin(theta + deltaTheta) * cos(phi);
+            y4 = r * sin(theta + deltaTheta) * sin(phi);
+            z4 = r * cos(theta + deltaTheta);
 
-			vec4.x=x4;
-			vec4.y=y4;
-			vec4.z=z4;
+            if(theta>(maxTheta-deltaTheta)) {
+                vecfan[countfan].x=x1;
+                vecfan[countfan].y=y1;
+                vecfan[countfan].z=z1;
+                countfan++;
+            }
 
-			vec1.x=x1;
-			vec1.y=y1;
-			vec1.z=z1;
+            vec4.x=x4;
+            vec4.y=y4;
+            vec4.z=z4;
 
-			vec3.x=x3;
-			vec3.y=y3;
-			vec3.z=z3;
+            vec1.x=x1;
+            vec1.y=y1;
+            vec1.z=z1;
 
-			norm = findnorm(vec4,vec1,vec3);
+            vec3.x=x3;
+            vec3.y=y3;
+            vec3.z=z3;
 
-			glNormal3f(norm.x, norm.y, norm.z);
-			glVertex3f(x4, y4, z4);
-			glVertex3f(x1, y1, z1);
-			glVertex3f(x2, y2, z2);
-			glVertex3f(x3, y3, z3);
-		}
-	}
+            norm = findnorm(vec4,vec1,vec3);
 
-	glEnd();
+            glNormal3f(norm.x, norm.y, norm.z);
+            glVertex3f(x4, y4, z4);
+            glVertex3f(x1, y1, z1);
+            glVertex3f(x2, y2, z2);
+            glVertex3f(x3, y3, z3);
+        }
+    }
 
-	glBegin(GL_TRIANGLE_FAN);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed);
-	glVertex3f(0,0,0);
-	countfan=0;
-	vec1.x=vec1.y=vec1.z=0;
-	for(i=(int)numPhi-1; i>=0; i--) {
-		if(countfan==2) {
-				countfan=0;
-		}
-		if(countfan==0) {
-				vec2=vecfan[i];
-				vec3=vecfan[i-1];
-				norm=findnorm(vec1,vec2,vec3);
-				glNormal3f(norm.x, norm.y, norm.z);
-		}
-		countfan++;
-		glVertex3f(vecfan[i].x,vecfan[i].y,vecfan[i].z);
+    glEnd();
 
-	}
-	//glVertex3f(vecfan[0].x,vecfan[0].y,vecfan[0].z);
-	glVertex3f(vecfan[(int)numPhi-1].x,vecfan[(int)numPhi-1].y,vecfan[(int)numPhi-1].z);
-	glVertex3f(0,0,0);
-	glEnd();
+    glBegin(GL_TRIANGLE_FAN);
+    if(isite==0) {
+        glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed);
+    }
+    else {
+        glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialBlue);
+    }
+    glVertex3f(0,0,0);
+    countfan=0;
+    vec1.x=vec1.y=vec1.z=0;
+    for(i=(int)numPhi-1; i>=0; i--) {
+        if(countfan==2) {
+                countfan=0;
+        }
+        if(countfan==0) {
+                vec2=vecfan[i];
+                vec3=vecfan[i-1];
+                norm=findnorm(vec1,vec2,vec3);
+                glNormal3f(norm.x, norm.y, norm.z);
+        }
+        countfan++;
+        glVertex3f(vecfan[i].x,vecfan[i].y,vecfan[i].z);
+
+    }
+    //glVertex3f(vecfan[0].x,vecfan[0].y,vecfan[0].z);
+    glVertex3f(vecfan[(int)numPhi-1].x,vecfan[(int)numPhi-1].y,vecfan[(int)numPhi-1].z);
+    glVertex3f(0,0,0);
+    glEnd();
 
 
-	glPopMatrix();
+    glPopMatrix();
 
-//	glFlush();
+//  glFlush();
 
-	return;
+    return;
 
 }
 
@@ -442,19 +469,24 @@ void display_sphere(int ind)
    //   switch(pos[ind].no) {
    switch (0) {
    case 0:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialCyan)  ; break;
-   case 2:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed)   ; break;
-   case 4:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialYellow); break;
-   case 3:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialGreen); break;
    case 1:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialBlue); break;
+   case 2:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed)   ; break;
+   case 3:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialGreen); break;
+   case 4:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialYellow); break;
    case 5:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialMagenta); break;
    case 6:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome); break;
-   case 7:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialCyan)  ; break;
-   case 8:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed)   ; break;
-   case 9:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialYellow); break;
-   case 10:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialGreen); break;
-   case 11:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialBlue); break;
-   case 12:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialMagenta); break;
-   case 13:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome); break;
+   case 7:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome2); break;
+   case 8:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome3); break;
+   case 9:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome4); break;
+   case 10:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome5); break;
+   case 11:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome6); break;
+   //case 7:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialCyan)  ; break;
+   //case 8:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed)   ; break;
+   //case 9:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialYellow); break;
+   //case 10:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialGreen); break;
+   //case 11:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialBlue); break;
+   //case 12:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialMagenta); break;
+   //case 13:  glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialSome); break;
    }
 
    glutSolidSphere(1, Precision, Precision);
@@ -466,9 +498,9 @@ void display_sphere(int ind)
 
 void create_circle( void )
 {
-    vector	  *ptch;
+    vector    *ptch;
     float alpha, delta ;
-    int	  i, j;
+    int   i, j;
 
     delta = 2.0 * PI / (16.*Precision);
     if (Circle) free(Circle);
@@ -501,8 +533,8 @@ void convert(vector *p, float f[3])
 void lighted_plate( void )
 {
 
-  vector	*ptch;
-  int	i, j, k;
+  vector    *ptch;
+  int   i, j, k;
   float   f[3];
   
   ptch = Circle;
@@ -510,9 +542,9 @@ void lighted_plate( void )
     glBegin(GL_POLYGON);
     for (k = 0; k < Precision*16; k++) 
       {
-	glVertex3f(ptch->x,ptch->y,ptch->z);
-	glNormal3f(ptch->x,ptch->y,ptch->z);
-	ptch++;
+    glVertex3f(ptch->x,ptch->y,ptch->z);
+    glNormal3f(ptch->x,ptch->y,ptch->z);
+    ptch++;
       }
     glEnd();
 
@@ -524,9 +556,9 @@ void lighted_plate( void )
 
     for (k = 0; k < Precision*16; k++) 
       {
-	glVertex3f(ptch->x,ptch->y,ptch->z);
-	glNormal3f(ptch->x,ptch->y,ptch->z);
-	ptch--;
+    glVertex3f(ptch->x,ptch->y,ptch->z);
+    glNormal3f(ptch->x,ptch->y,ptch->z);
+    ptch--;
       }
     glEnd();
     }
@@ -559,7 +591,7 @@ void draw_box( float *vec ,float boxdis)
   glMaterialfv(GL_FRONT, GL_DIFFUSE,MaterialRed);
   glColor3f(1.0,0,0);
   glBegin(GL_LINE_STRIP);
-  for(i=0;i<17;i++)	
+  for(i=0;i<17;i++) 
     {
       glVertex3fv(vert[i]);
     }
@@ -638,63 +670,67 @@ static void CursorKeys(int key, int x, int y)
 
 
 
-static void Key(unsigned char key, int x, int y)
-{
+static void Key(unsigned char key, int x, int y) {
 
     switch (key) {
-      case 27:
-        exit(1);
-
-      case ',':
-        yRotation += 5;
-        break;
-      case '.':
-        yRotation -= 5;
-        break;
-      case 'x':
-        Distance += 2;
-        break;
-      case 'z':
-        Distance -= 2;
-        break;
-      case '1':
-	Precision =2;
-	create_circle();
-	break;
-      case '2':
-        Precision =4;
-	create_circle();
-	break;
-      case '3':
-	Precision =8;
-	create_circle();
-	break; 
-      case '4':
-	Precision =16;
-	create_circle();
-	break;  
-      case '5':
-	Precision =32;
-	create_circle();
-	break;
-      case 'l':
-	Drawall++;
-	if (Drawall>3) Drawall =0;
-	break;
-      case 'm':
-	glstat.Animate = !glstat.Animate;
-	break;
-      case 'b':
-	glstat.BackwardAnimation = !glstat.BackwardAnimation;
-	break;
-      case '=':
-        glstat.OneUp = 1;
-	break;
-      case '-':	
-	glstat.OneDown =1;
-	break;
-     default:
-       return;
+        case 27:
+            exit(1);
+        case ',':
+            yRotation += 5;
+            break;
+        case '.':
+            yRotation -= 5;
+            break;
+        case 'x':
+            Distance += 2;
+            break;
+        case 'z':
+            Distance -= 2;
+            break;
+        case '1':
+            Precision =2;
+            create_circle();
+            break;
+        case '2':
+            Precision =4;
+            create_circle();
+            break;
+        case '3':
+            Precision =8;
+            create_circle();
+            break; 
+        case '4':
+            Precision =16;
+            create_circle();
+            break;  
+        case '5':
+            Precision =32;
+            create_circle();
+            break;
+        case 'l':
+            Drawall++;
+            if (Drawall>3) Drawall =0;
+            break;
+        case 'm':
+            glstat.Animate = !glstat.Animate;
+            break;
+        case 'b':
+            glstat.BackwardAnimation = !glstat.BackwardAnimation;
+            break;
+        case 'r':
+            glstat.Repeat = !glstat.Repeat;
+            break;
+        case 'g':
+            glstat.Graphics = !glstat.Graphics;
+            break;
+        case '=':
+            glstat.OneUp = 1;
+            break;
+        case '-':   
+            glstat.OneDown =1;
+            break;
+        default:
+            return;
     } 
     glutPostRedisplay();
 
@@ -726,7 +762,7 @@ static void Init( void )
    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, front_specular);
 
    /*   glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat);
-	glLightfv(GL_LIGHT0, GL_POSITION, pos);*/
+    glLightfv(GL_LIGHT0, GL_POSITION, pos);*/
 
    glEnable(GL_CULL_FACE);
 
@@ -773,17 +809,57 @@ static void ModeMenu(int entry)
 
 static void Idle() {
 
-    if  (glstat.Animate) {
-        glstat.OneUp = glstat.Animate;
+    if (sys.sim_type==0) {
+        if (glstat.Animate) {
+            glstat.OneUp = glstat.Animate;
+        }
+
+        if (glstat.OneUp) {
+            mainloop_for_graphics();
+            currentslice = &slice[0];
+            convert_coordinates(currentslice);
+            glstat.OneUp =0;
+            glutPostRedisplay();
+        }
     }
 
-    if( glstat.OneUp) {
-        mainloop_for_graphics();
-        currentslice = &slice[0];
-        convert_coordinates(currentslice);
-        glstat.OneUp =0;
-        glutPostRedisplay();
+    else if(sys.sim_type==1) {
+        if  (glstat.Animate) {
+            if (glstat.BackwardAnimation){
+                glstat.OneDown = glstat.Animate;
+            }
+            else {
+                glstat.OneUp = glstat.Animate;
+            }
+        }
+
+        if (glstat.OneDown) {
+            currentslice--;
+            if (currentslice < slice) {
+                currentslice = &slice[path.nslices -1];
+            }
+            glstat.OneDown =0;
+            convert_coordinates(currentslice);
+            glutPostRedisplay();
+        }
+
+        if (glstat.OneUp) {
+            if(glstat.Graphics==0) {
+                currentslice = &slice[path.nslices-1];
+            }
+            currentslice++;
+            if (currentslice > &slice[path.nslices-1]) {
+                currentslice = &slice[0];
+                if(!glstat.Repeat) {
+                    mainloop_for_graphics();
+                }
+            }
+            glstat.OneUp =0;
+            convert_coordinates(currentslice);
+            glutPostRedisplay();
+        }
     }
+
 
     return;
 
@@ -814,10 +890,21 @@ void Init_Graphics(int argc, char *argv[])
 
   Init();
 
-  pos = (Particle *) calloc( sys.npart , sizeof(Particle) );
-
   currentslice = &slice[0];
   convert_coordinates(currentslice);
+  glstat.Animate=0;
+  glstat.Sleeptime=30;
+  glstat.Repeat=0;
+  glstat.Animate=0;
+  glstat.MakeMovie=0;
+  glstat.NumMovie=0;
+  glstat.Graphics = 1;
+  glstat.NumSlices=0;
+  glstat.Ninter=1;
+  glstat.Ncount=0;
+
+
+
 
   glutIdleFunc( Idle );
   glutReshapeFunc( Reshape );
