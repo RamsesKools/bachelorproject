@@ -173,7 +173,7 @@ void samplediffusion(int choice) {
             rcurrent = nonpbcr;
 
             rotmat = getrotmatrix(slice[0].pts[0].q);
-            matrix_x_vector(rotmat,sys.site[0],pprev);
+            matrix_x_vector(rotmat,sys.site[0].r,pprev);
             Psi = nulvec;
         }
 
@@ -188,7 +188,7 @@ void samplediffusion(int choice) {
 
         //get Psi: unbounded step via norm rotation axis times angle
         rotmat=getrotmatrix(slice[0].pts[0].q);
-        matrix_x_vector(rotmat,sys.site[0],pcurrent);
+        matrix_x_vector(rotmat,sys.site[0].r,pcurrent);
         pmagangle = acos(vector_inp(pprev,pcurrent));
         if((!(pmagangle!=pmagangle)) && (pmagangle>0.0000001)) {
             vector_cross(pprev,pcurrent,protax);
@@ -262,9 +262,9 @@ void samplediffusion(int choice) {
         }
         fclose(fmsad);
 
-        DCT = MSDCumulant/(MAXT-1.0);
+        DCT = MSDCumulant/((MAXT-1.0)*langevin.timestep);
         DCT/= 6.0;
-        DCR = MSADCumulant/(MAXT-1.0);
+        DCR = MSADCumulant/((MAXT-1.0)*langevin.timestep);
         DCR/= 4.0;
 
         fdiff = fopen("diffusionconstants.dat","w");

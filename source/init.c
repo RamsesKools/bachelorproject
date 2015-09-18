@@ -69,21 +69,31 @@ void init_model() {
 
     sys.sqrtmobilityT = sqrt(sys.mobilityT);
     sys.sqrtmobilityR = sqrt(sys.mobilityR);
-
-    if(sys.nsites==1) {
-        sys.site[0].x=0.;
-        sys.site[0].y=0.;
-        sys.site[0].z=1.;
-    }
-
+    
+    if(sys.nsites>0) {
+        sys.site[0].r.x=0.;
+        sys.site[0].r.y=0.;
+        sys.site[0].r.z=1.;
+        
+        sys.site[0].eps=sys.epsilonP;
+        sys.site[0].delta=sys.delta;
+    }  
 
     //OTHER patch definitions should be done randomly
     //Possible create separate structure Site which contains: position patch, width, epsilon
     //  then every patch can be different in character
 
-    for(isite=0; isite<sys.nsites; isite++) {
-        printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
-    }
+
+    // sites 1 to nsites will be given a random vector
+    for(isite=1; isite<sys.nsites; isite++) {
+        sys.site[isite].r = RandomUnitVector();   
+
+        sys.site[isite].eps=sys.epsilonN;
+        sys.site[isite].delta=sys.deltaN;
+        // deze regel stond er al maar ik weet niet wat die doet
+        //printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
+
+     }
 
 
     return;
@@ -131,6 +141,7 @@ void setup_positions(Slice *psl) {
                 }
             }
         }
+    
     }
 
 
@@ -196,9 +207,18 @@ void read_input() {
         } else if( strcmp(pt,"delta")==0) {
             pt = strtok(NULL," ");
             sscanf(pt,"%lf",&sys.delta);
+        } else if( strcmp(pt,"deltaN")==0) {
+            pt = strtok(NULL," ");
+            sscanf(pt,"%lf",&sys.deltaN);
+        } else if( strcmp(pt,"epsilonN")==0) {
+            pt = strtok(NULL," ");
+            sscanf(pt,"%lf",&sys.epsilonN);
         } else if( strcmp(pt,"nsites")==0) {
             pt = strtok(NULL," ");
             sscanf(pt,"%d",&sys.nsites);
+        //} else if( strcmp(pt,"nsitesN")==0) { //deze regel leest hoeveel extra random patches ermoeten worden gemaakt
+        //    pt = strtok(NULL," ");
+        //    sscanf(pt,"%d",&sys.nsitesN);
         } else if( strcmp(pt,"beta")==0) {
             pt = strtok(NULL," ");
             sscanf(pt,"%lf",&sys.beta);
@@ -216,7 +236,10 @@ void read_input() {
             sscanf(pt,"%lf",&sys.epsilonC);
         } else if( strcmp(pt,"epsilonP")==0) {
             pt = strtok(NULL," ");
-            sscanf(pt,"%lf",&sys.epsilonP);
+            sscanf(pt,"%lf",&sys.epsilonP);     
+        } else if( strcmp(pt,"epsilonN")==0) { //  regel toegevoegd om epsilon variabelen voor extra patches in te lezen
+            pt = strtok(NULL," ");
+            sscanf(pt,"%lf",&sys.epsilonN);
         } else if( strcmp(pt,"boxl")==0) {
             pt = strtok(NULL," ");
             sscanf(pt,"%lf",&sys.boxl.x);
@@ -267,7 +290,7 @@ void read_input() {
         } else if( strcmp(pt,"TIS\n")==0) {
             printf("Reading TIS parameters\n");
         } else {
-            printf("Keyword unknown: %s",pt);
+            printf("Keyword unknown: %s\n",pt);
         }
     }
 
@@ -295,12 +318,15 @@ void print_input(void) {
     printf("sigma           %lf\n", sys.sigma);
     printf("epsilonC        %lf\n", sys.epsilonC);
     printf("epsilonP        %lf\n", sys.epsilonP);
+    printf("epsilonN        %lf\n", sys.epsilonN); //toegevoegd 10-9-15
 
     printf("\n");
     printf("System\n");
     printf("npart           %d\n", sys.npart);
     printf("nsites          %d\n", sys.nsites);
+    //printf("nsitesN         %d\n", sys.nsitesN);
     printf("delta           %lf\n", sys.delta);
+    printf("deltaN          %lf\n", sys.deltaN); //toegevoegd 10-9-15
     printf("beta            %lf\n", sys.beta);
     printf("mobilityT       %lf\n", sys.mobilityT);
     printf("mobilityR       %lf\n", sys.mobilityR);
@@ -332,10 +358,10 @@ void state_init() {
     //define the state volume boundaries
 
     path.initial_state=1;
-    path.nstates=3;
+    path.nstates=2;
 
 
-    state[0].target.energy = -30*sys.epsilonP;
+    state[0].target.energy = -sys.epsilonP; 
     //keep the state as small as possible
     state[0].volume_op = state[0].lambda[0];
     printf("Definition of bound state:\n");
@@ -345,6 +371,7 @@ void state_init() {
     printf("\n");
 
     state[1].target.energy = 0;
+    state[1].mindist = 2*sys.sigma;
     //keep the state as small as possible
     state[1].volume_op = state[1].lambda[0];
     printf("Definition of unbound state:\n");
@@ -352,7 +379,8 @@ void state_init() {
     printf("         Maximum energy boundary: %lf\n",state[1].target.energy+state[1].volume_op);
     printf("         State volume set at:     %lf\n",state[1].volume_op);
     printf("\n");
-
+    
+    // hier moet nog wat mee gebeuren denk ik ...???
     //keep the state as small as possible
     state[2].volume_op = state[2].lambda[0];
     printf("Definition of non-specific state:\n");
@@ -458,7 +486,7 @@ void read_lambda() {
 
 
     if((fplam = fopen("lambda_u.inp","r"))==NULL){
-        printf("Warning: lambda_U.inp not found\n");
+        printf("Warning: lambda_u.inp not found\n");
         exit(1);
     }
     fscanf(fplam,"%d",&state[1].nrep);
@@ -468,15 +496,17 @@ void read_lambda() {
     fclose(fplam);
 
 
-    if((fplam = fopen("lambda_n.inp","r"))==NULL){
-        printf("Warning: lambda_T.inp not found\n");
-        exit(1);
+    if(path.nstates==3) {
+        if((fplam = fopen("lambda_n.inp","r"))==NULL){
+            printf("Warning: lambda_T.inp not found\n");
+            exit(1);
+        }
+        fscanf(fplam,"%d",&state[2].nrep);
+        for( irep=0; irep<state[2].nrep; irep++) {
+            fscanf(fplam,"%lf",&state[2].lambda[irep]);
+        }
+        fclose(fplam);
     }
-    fscanf(fplam,"%d",&state[2].nrep);
-    for( irep=0; irep<state[2].nrep; irep++) {
-        fscanf(fplam,"%lf",&state[2].lambda[irep]);
-    }
-    fclose(fplam);
 
 
     return;
@@ -704,7 +734,7 @@ void dos_input() {
                 fscanf(fp,"%d %lf\n",&idum,&state[i].srep[j].dos);
                 printf("%d %lf\n",j,state[i].srep[j].dos);
             }
-            fscanf(fp,"");
+            fscanf(fp,"\n");
         }
         fclose(fp);
     }
@@ -811,22 +841,3 @@ void conf_input(Slice *psl) {
 
     return;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

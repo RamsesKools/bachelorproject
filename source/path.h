@@ -96,7 +96,7 @@
     a.z -= b.z*rint(a.z/b.z);}
 
 #define NPART 12
-#define NSITES 5
+#define NSITES 20
 #define MAXSLICES 300000
 #define MAXSTATES 3
 #define MAXREPLICA 60
@@ -145,6 +145,17 @@ typedef struct particle_type {
     quaternion    q;
 
 } Pts;
+
+
+typedef struct site_type {
+    
+    vector        r;
+
+    double        eps,
+                  delta;
+
+} Site; // hoe moet deze struct heten? toegevoegd 10-9-15
+
 
 typedef struct bonds_mat {
 
@@ -278,11 +289,16 @@ typedef struct replica_type {
 
 typedef struct slice_type {
 
-    Pts           pts[NPART];
+   Pts           pts[NPART];
 
     double        order_parameter,
-                  mindist,
+                  rijdist,
+                  energyN,
+                  energyT,
                   energy;
+
+    int           minisite,
+                  minjsite;
 
 } Slice;
 
@@ -381,6 +397,7 @@ typedef struct system_type {
                   ncycle2,
                   npart,
                   nsites,
+                  //nsitesN, //misschien later nog toevoegen
                   start_type,
                   sim_type,
                   freq_graphics,
@@ -390,6 +407,7 @@ typedef struct system_type {
                   beta,
                   temp,
                   delta,
+                  deltaN,
                   cosdelta,
                   mobilityT,
                   sqrtmobilityT,
@@ -402,10 +420,11 @@ typedef struct system_type {
                   sigmaLJ,
                   sigmaLJsq,
                   epsilonC,
-                  epsilonP;
+                  epsilonP,
+                  epsilonN;
 
-    vector        boxl,
-                  site[5];
+    vector        boxl;
+    Site          site[NSITES];
 
     FILE          *filep;
 

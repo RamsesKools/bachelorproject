@@ -12,7 +12,7 @@ double potential_energy(Slice *psl) {
 
     Pts *psi,*psj;
     vector rij,p[sys.npart][sys.nsites],ui,uj,rnorm;
-    double r2,r6,r6inv,r12inv,potential_energy,potential_energy_attP=0,potential_energy_attC=0,potential_energy_rep=0,r,cositheta,cosjtheta;
+    double r2,r6,r6inv,r12inv,potential_energy,potential_energy_attP=0,potential_energy_attC=0,potential_energy_rep=0,potential_energy_attP_d=0,r,cositheta,cosjtheta;
     double phi_i,phi_j;
     int ipart,jpart,isite,jsite;
     tensor rotmati,rotmatj;
@@ -21,7 +21,7 @@ double potential_energy(Slice *psl) {
         psi = &psl->pts[ipart];
         rotmati = getrotmatrix(psi->q);
         for( isite=0; isite<sys.nsites; isite++) {
-            matrix_x_vector(rotmati,sys.site[isite],p[ipart][isite]);
+            matrix_x_vector(rotmati,sys.site[isite].r,p[ipart][isite]); 
         }
     }
     //calculate Lennard-Jones interaction between all particles
@@ -47,7 +47,7 @@ double potential_energy(Slice *psl) {
             scalar_divide(rij,r,rnorm);
             //calculate angular part of potential
             for( isite=0; isite<sys.nsites; isite++ ) {
-                cositheta=-vector_inp(rnorm,p[ipart][isite]);
+                cositheta=-vector_inp(rnorm,p[ipart][isite]); 
                 if(cositheta<sys.cosdelta) {
                     continue;
                 }
@@ -57,8 +57,25 @@ double potential_energy(Slice *psl) {
                     if(cosjtheta<sys.cosdelta) {
                         continue;
                     }
+                    
                     phi_j=0.5*(1.0-cos(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta));
-                    potential_energy_attP += phi_i*phi_j*(r12inv - r6inv);
+                    potential_energy_attP_d = phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps); //Berthelot mixing rule is used for determining epsilon
+                    
+                    //bewaar door welke patches de potentiele energie tot stand komt:
+                    // 
+                    if( isite==0 && jsite==0) {
+                         psl->energyT = potential_energy_attP_d;
+
+                    }
+                    else {
+                        psl->energyN = potential_energy_attP_d;
+                        psl->minisite = isite;
+                        psl->minjsite = jsite;
+
+                    }
+
+                    potential_energy_attP += potential_energy_attP_d;
+
                 }
             }
         }
@@ -66,7 +83,7 @@ double potential_energy(Slice *psl) {
 
     potential_energy_rep*=4.0;
     
-    potential_energy_attP*=4.0*sys.epsilonP;
+    potential_energy_attP*=4.0;//*sys.epsilonP; // dit wordt nu in de loop al gedaan
 
     potential_energy_attC*=4.0*sys.epsilonC;
 
@@ -83,7 +100,7 @@ void calculate_forces(Slice *psl) {
     vector rij,p[sys.npart][sys.nsites],ui,uj,rnorm;
     vector rcrosspi,rcrosspj,piperpr,pjperpr,fangi,fangj;
     double r2,r6,r6inv,r12inv,r2inv,rinv,potential_energy=0,potential_energy_rep=0,r,cositheta,cosjtheta;
-    double phi_i,phi_j,fmag,fmagP,fmagrinv,UmagP;
+    double phi_i,phi_j,fmag,fmagP,fmagrinv,UmagP,epsmix;
     int ipart,jpart,isite,jsite;
     tensor rotmati,rotmatj;
     
@@ -95,7 +112,7 @@ void calculate_forces(Slice *psl) {
         psi->t = nulvec;
         rotmati = getrotmatrix(psi->q);
         for( isite=0; isite<sys.nsites; isite++) {
-            matrix_x_vector(rotmati,sys.site[isite],p[ipart][isite]);
+            matrix_x_vector(rotmati,sys.site[isite].r,p[ipart][isite]);
         }
     }
 
@@ -123,8 +140,8 @@ void calculate_forces(Slice *psl) {
                 scalar_plustimes(rij,fmag,psi->f);
                 scalar_mintimes(rij,fmag,psj->f);
 
-                UmagP = 4.0*sys.epsilonP*(r12inv - r6inv);
-                fmag = sys.epsilonP*r2inv*(48.*r12inv - 24.*r6inv);
+                UmagP = 4.0*(r12inv - r6inv); // hoe fixen we dit met die epsilon???
+                fmag = r2inv*(48.*r12inv - 24.*r6inv); // hoe fixen???
 
                 r=sqrt(r2);
                 //printf("distance particles %lf\n",r);
@@ -145,11 +162,14 @@ void calculate_forces(Slice *psl) {
                         if(cosjtheta<sys.cosdelta) {
                             continue;
                         }
+
+                        epsmix = sqrt(sys.site[isite].eps*sys.site[jsite].eps);
+
                         //calculate phi for particle j
                         phi_j=0.5*(1.0-cos(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta));
                         //printf("phi_j %d %lf\n",jpart, phi_j);
 
-                        fmagP = fmag*phi_i*phi_j;
+                        fmagP = fmag*phi_i*phi_j*epsmix; 
                         //printf("fmagP attraction %lf\n", fmagP);
                         scalar_plustimes(rij,fmagP,psi->f);
                         scalar_mintimes(rij,fmagP,psj->f);
@@ -161,7 +181,7 @@ void calculate_forces(Slice *psl) {
                         vector_cross(rnorm,rcrosspj,pjperpr);
 
                         //CALCULATE DEL U / DEL COSTHETA
-                        fmag = UmagP*phi_j*HALFPI*sin(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta; 
+                        fmag = UmagP*phi_j*HALFPI*sin(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta*epsmix; 
                         //printf("fmag due to patch i %lf\n", fmag);
                         fmagrinv=fmag*rinv;
                         scalar_mintimes(piperpr,fmagrinv,psi->f);
@@ -171,7 +191,7 @@ void calculate_forces(Slice *psl) {
 
                         scalar_mintimes(rcrosspi,fmag,psi->t);
 
-                        fmag = UmagP*phi_i*HALFPI*sin(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta; 
+                        fmag = UmagP*phi_i*HALFPI*sin(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta*epsmix; 
                         //printf("fmag due to patch j %lf\n", fmag);
                         fmagrinv=fmag*rinv;
                         scalar_plustimes(pjperpr,fmagrinv,psi->f);
@@ -196,7 +216,7 @@ void calculate_forces(Slice *psl) {
 
 void propagate_bd(Slice *psl)  {
 
-    int ipart;
+    int ipart,inter;
     Pts *psi;
     vector theta,f,t,u;
     quaternion qu1,qu2,qu3,qprime;
@@ -204,59 +224,63 @@ void propagate_bd(Slice *psl)  {
     quattensor Bmat;
     double dt,lambdaq;
 
-    calculate_forces(psl);
 
-    for( ipart=0; ipart<sys.npart; ipart++) {
-        psi = &psl->pts[ipart];
 
-        //translational part
-        //muT*F*dt*Beta
-        scalar_times(psi->f,langevin.dtBeta,f);
-        scalar_times(f,sys.mobilityT,f);
-        vector_add(psi->r,f,psi->r);
+    for( inter=0; inter<langevin.ninter; inter++) {
+        calculate_forces(psl);
 
-        theta=RandomBrownianVector(langevin.dtD);
-        scalar_times(theta,sys.sqrtmobilityT,theta);
-        vector_add(psi->r,theta,psi->r);
+        for( ipart=0; ipart<sys.npart; ipart++) {
+            psi = &psl->pts[ipart];
 
-        pbc(psi->r,sys.boxl);
+            //translational part
+            //muT*F*dt*Beta
+            scalar_times(psi->f,langevin.dtBeta,f);
+            scalar_times(f,sys.mobilityT,f);
+            vector_add(psi->r,f,psi->r);
 
-        //rotational part
-        //get matrices for q(t)
-        rotmat = getrotmatrix(psi->q); 
-        Bmat = getquatmatrix(psi->q);
+            theta=RandomBrownianVector(langevin.dtD);
+            scalar_times(theta,sys.sqrtmobilityT,theta);
+            vector_add(psi->r,theta,psi->r);
 
-        //Baalpha * (muR) * rotmatA * torque * delt = qu1
-        scalar_times(psi->t,langevin.dtBeta,t);
-        //do not forget, multiply with the inverse rotation matrix to convert to body-fixed torque
-        matrixT_x_vector(rotmat,t,u);
-        scalar_times(u,sys.mobilityR,u);
-        quatmatrix_x_vec(Bmat,u,qu1);
+            pbc(psi->r,sys.boxl);
 
-        //Baalpha * (muR) * theta = qu2
-        theta=RandomBrownianVector(langevin.dtD);
-        scalar_times(theta,sys.sqrtmobilityR,theta);
-        quatmatrix_x_vec(Bmat,theta,qu2);
+            //rotational part
+            //get matrices for q(t)
+            rotmat = getrotmatrix(psi->q); 
+            Bmat = getquatmatrix(psi->q);
 
-        //qprime = qu1+qu2+q(t) for the first time
-        quat_add(qu1,qu2,qprime);
+            //Baalpha * (muR) * rotmatA * torque * delt = qu1
+            scalar_times(psi->t,langevin.dtBeta,t);
+            //do not forget, multiply with the inverse rotation matrix to convert to body-fixed torque
+            matrixT_x_vector(rotmat,t,u);
+            scalar_times(u,sys.mobilityR,u);
+            quatmatrix_x_vec(Bmat,u,qu1);
 
-        quat_add(qprime,psi->q,qprime);
+            //Baalpha * (muR) * theta = qu2
+            theta=RandomBrownianVector(langevin.dtD);
+            scalar_times(theta,sys.sqrtmobilityR,theta);
+            quatmatrix_x_vec(Bmat,theta,qu2);
 
-        //find lambdaq, I guess it is th smallest...check which one keeps q(t+delt)^2=1
-        //woohoo it works for the smaller lambdaq, maybe also simply for the bigger...
-        lambdaq=langrange_multiplier_quat(qprime, psi->q);
-        if(lambdaq>1e20) {
-            //langrange multiplier did not work, simply renormalize quaternion
-            scdivide_quat(qprime,sqrt(quat_inp(qprime,qprime)),psi->q);
+            //qprime = qu1+qu2+q(t) for the first time
+            quat_add(qu1,qu2,qprime);
+
+            quat_add(qprime,psi->q,qprime);
+
+            //find lambdaq, I guess it is th smallest...check which one keeps q(t+delt)^2=1
+            //woohoo it works for the smaller lambdaq, maybe also simply for the bigger...
+            lambdaq=langrange_multiplier_quat(qprime, psi->q);
+            if(lambdaq>1e20) {
+                //langrange multiplier did not work, simply renormalize quaternion
+                scdivide_quat(qprime,sqrt(quat_inp(qprime,qprime)),psi->q);
+            }
+            else {
+                //lambdaq*q(t) = qu3
+                sctimes_quat(psi->q,lambdaq,qu3);
+                //q(t+delt) = qprime+qu3
+                quat_add(qprime,qu3,psi->q);
+            }
+
         }
-        else {
-            //lambdaq*q(t) = qu3
-            sctimes_quat(psi->q,lambdaq,qu3);
-            //q(t+delt) = qprime+qu3
-            quat_add(qprime,qu3,psi->q);
-        }
-
     }
 
     return;

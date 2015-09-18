@@ -339,7 +339,7 @@ void drawPatch(int ind,int isite)
 	zvec.x=0;
 	zvec.y=0;
 	zvec.z=1;
-	qrot=quatVecToVec(zvec,sys.site[isite]);
+	qrot=quatVecToVec(zvec,sys.site[isite].r);
 
 	getdrawrotmatrix(qrot,matrix);
 	glMultMatrixf(matrix);
