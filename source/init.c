@@ -403,7 +403,7 @@ void state_init() {
 
 
     //keep the state as small as possible
-    state[0].target.energy = -4.0*sys.epsilonP*(1.0/sys.sigmaLJsq)*(1.0/sys.sigmaLJsq)*(1.0/sys.sigmaLJsq); 
+    state[0].target.energy = -2.0*sys.epsilonP;
     state[0].volume_op = state[0].lambda[0];
     printf("Definition of bound state:\n");
     printf("         Ground-state energy:     %lf\n",state[0].target.energy);
@@ -525,7 +525,7 @@ void read_lambda() {
 
 
     if((fplam = fopen("lambda_b.inp","r"))==NULL){
-        printf("Warning: lambda_Ih.inp not found\n");
+        printf("Warning: lambda_b.inp not found\n");
         exit(1);
     }
     fscanf(fplam,"%d",&state[0].nrep);
@@ -548,7 +548,7 @@ void read_lambda() {
 
     if(path.nstates==3) {
         if((fplam = fopen("lambda_n.inp","r"))==NULL){
-            printf("Warning: lambda_T.inp not found\n");
+            printf("Warning: lambda_n.inp not found\n");
             exit(1);
         }
         fscanf(fplam,"%d",&state[2].nrep);
@@ -708,7 +708,11 @@ void traj_input() {
     if(path.initial_state == 1 || path.initial_state==2) {
 	    path.current_gsen = state[path.initial_state-1].target.energy;
     }
-    //add similar as above for nonfunctional state!!!!
+
+    if(path.initial_state == 3) {
+        potential_energy(&slice[0]);
+        path.current_gsen = -2. * sqrt(sys.site[slice[0].minisite].eps *sys.site[slice[0].minjsite].eps);
+    }
 
     for(i=0;i<path.nslices;i++) {
         psl = &(slice[i]);
