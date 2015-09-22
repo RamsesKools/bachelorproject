@@ -9,7 +9,7 @@ HFILES =
 
 CF =   cc
 FFLAGS =   
-LIBS =   -lm -framework OpenGL -framework Glut -framework Cocoa
+LIBS =   -lm  -lglut -lGLU -lGL -L/usr/X11/lib -L/usr/X11R6/lib -lX11 -lXext -lXmu -lXt -lXi -lSM -lICE -lpthread 
 OUT =	../run/bmd.run
 
 

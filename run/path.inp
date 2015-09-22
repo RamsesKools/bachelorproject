@@ -1,7 +1,7 @@
 Simulation
 sim_type          1
 start_type        1
-graphics          0
+graphics          1
 ncycle1           500
 ncycle2           500
 
