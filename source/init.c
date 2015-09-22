@@ -378,7 +378,14 @@ void state_init() {
     printf("\nDefining state defintions\n");
 
     path.initial_state=1;
-    path.nstates=2;
+
+    if(nsites > 1) {
+        path.nstates = 3;
+    }
+
+    else {
+        path.nstates=2;
+    }
 
     printf("Only two particles: placing them towards each other\n");
     for( ipart=0; ipart<sys.npart; ipart++ ) {
