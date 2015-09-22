@@ -86,14 +86,29 @@ void init_model() {
 
 
     // sites 1 to nsites will be given a random vector
+    
+    int overlap, jsite, failsafe_count;
     for(isite=1; isite<sys.nsites; isite++) {
-        sys.site[isite].r = RandomUnitVector();   
+        do {
+            overlap = 0;
+            sys.site[isite].r = RandomUnitVector();   
+            for(jsite=0; jsite<isite; jsite++) {
+                if(vector_inp(sys.site[isite].r ,sys.site[jsite].r) > sys.cosdelta) {
+                    overlap = 1;
+                    failsafe_count ++;
+                    if(failsafe_count > 100000) {
+                        exit(1);
+                    }                    
+                    break;
+                }
+            }
+
+            // deze regel stond er al maar ik weet niet wat die doet
+            //printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
+        } while (overlap == 1);
 
         sys.site[isite].eps=sys.epsilonN;
         sys.site[isite].delta=sys.deltaN;
-        // deze regel stond er al maar ik weet niet wat die doet
-        //printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
-
      }
 
 
