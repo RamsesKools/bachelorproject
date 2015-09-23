@@ -98,7 +98,7 @@
 #define NPART 2
 #define NSITES 20
 #define MAXSLICES 500000
-#define MAXSTATES 2
+#define MAXSTATES 3
 #define MAXREPLICA 15
 #define MAXSETS 0
 #define NACC 4
@@ -282,7 +282,7 @@ typedef struct replica_type {
     vector        string;
 
 
-    FILE          *pathfilep[2];
+    //FILE          *pathfilep[2];
 
 } Replica;
 

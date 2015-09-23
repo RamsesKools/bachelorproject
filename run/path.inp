@@ -1,6 +1,6 @@
 Simulation
 sim_type          1
-start_type        1
+start_type        0
 graphics          1
 ncycle1           500
 ncycle2           500
@@ -11,9 +11,9 @@ mobilityT         1.0
 mobilityR         3.0
 epsilonC          0.0
 epsilonP          20.0
-epsilonN          0.0
+epsilonN          5.0
 delta             20.0
-nsites            1
+nsites            10
 nsitesN           0
 
 System

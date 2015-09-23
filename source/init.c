@@ -51,7 +51,7 @@ void setup_simulation() {
 
 void init_model() {
 
-    int isite;
+    int isite,jsite,overlap;
     double psifactor,psi;
 
     sys.boxl.y = sys.boxl.z = sys.boxl.x;
@@ -86,29 +86,21 @@ void init_model() {
 
 
     // sites 1 to nsites will be given a random vector
-    
-    int overlap, jsite, failsafe_count;
     for(isite=1; isite<sys.nsites; isite++) {
         do {
-            overlap = 0;
+            overlap=0;
             sys.site[isite].r = RandomUnitVector();   
             for(jsite=0; jsite<isite; jsite++) {
-                if(vector_inp(sys.site[isite].r ,sys.site[jsite].r) > sys.cosdelta) {
-                    overlap = 1;
-                    failsafe_count ++;
-                    if(failsafe_count > 100000) {
-                        exit(1);
-                    }                    
+                if(vector_inp(sys.site[isite].r,sys.site[jsite].r)> cos(2.0*sys.delta)) {
+                    overlap=1;
                     break;
                 }
             }
-
-            // deze regel stond er al maar ik weet niet wat die doet
-            //printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
-        } while (overlap == 1);
+        } while(overlap==1);
 
         sys.site[isite].eps=sys.epsilonN;
         sys.site[isite].delta=sys.deltaN;
+        //printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
      }
 
 
@@ -378,13 +370,11 @@ void state_init() {
     printf("\nDefining state defintions\n");
 
     path.initial_state=1;
-
-    if(nsites > 1) {
-        path.nstates = 3;
-    }
-
-    else {
+    if(sys.nsites==1) {
         path.nstates=2;
+    }
+    else if(sys.nsites>1) {
+        path.nstates=3;
     }
 
     printf("Only two particles: placing them towards each other\n");
@@ -410,7 +400,7 @@ void state_init() {
 
 
     //keep the state as small as possible
-    state[0].target.energy = -2.0*sys.epsilonP;
+    state[0].target.energy = -2.0*sys.epsilonP; 
     state[0].volume_op = state[0].lambda[0];
     printf("Definition of bound state:\n");
     printf("         Ground-state energy:     %lf\n",state[0].target.energy);
@@ -553,17 +543,15 @@ void read_lambda() {
     fclose(fplam);
 
 
-    if(path.nstates==3) {
-        if((fplam = fopen("lambda_n.inp","r"))==NULL){
-            printf("Warning: lambda_n.inp not found\n");
-            exit(1);
-        }
-        fscanf(fplam,"%d",&state[2].nrep);
-        for( irep=0; irep<state[2].nrep; irep++) {
-            fscanf(fplam,"%lf",&state[2].lambda[irep]);
-        }
-        fclose(fplam);
+    if((fplam = fopen("lambda_n.inp","r"))==NULL){
+        printf("Warning: lambda_n.inp not found\n");
+        exit(1);
     }
+    fscanf(fplam,"%d",&state[2].nrep);
+    for( irep=0; irep<state[2].nrep; irep++) {
+        fscanf(fplam,"%lf",&state[2].lambda[irep]);
+    }
+    fclose(fplam);
 
     printf("Done reading interface values\n");
 
@@ -712,14 +700,14 @@ void traj_input() {
 	}
 
 
-    if(path.initial_state == 1 || path.initial_state==2) {
+    if(path.initial_state ==1 || path.initial_state==2) {
 	    path.current_gsen = state[path.initial_state-1].target.energy;
     }
-
-    if(path.initial_state == 3) {
+    else if( path.initial_state==3 ) {
         potential_energy(&slice[0]);
-        path.current_gsen = -2. * sqrt(sys.site[slice[0].minisite].eps *sys.site[slice[0].minjsite].eps);
+	    path.current_gsen = -2.0*sqrt(sys.site[slice[0].minisite].eps*sys.site[slice[0].minjsite].eps);
     }
+    //add similar as above for nonfunctional state!!!!
 
     for(i=0;i<path.nslices;i++) {
         psl = &(slice[i]);

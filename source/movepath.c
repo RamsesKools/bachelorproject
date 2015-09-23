@@ -67,9 +67,9 @@ int in_state(Slice *psl) {
         return 2;
     }
 
-    if(path.nstates>2) {
+    if(path.nstates==3) {
         //return 3 if in state 3, the non-specific state
-        if ((psl->energyN + 2. * sqrt(sys.site[psl->minisite].eps*sys.site[psl->minjsite].eps)) < state[2].volume_op) {
+        if ((psl->energyN + 2.0*sqrt(sys.site[psl->minisite].eps*sys.site[psl->minjsite].eps)) < state[2].volume_op) {
             return 3;
         }
     }
@@ -629,7 +629,7 @@ int swap_states(int irep,int jrep) {
     }
 
     if (final_state == 3) {
-        path.current_gsen =-2. * sqrt(sys.site[slice[pathlen-1].minisite].eps*sys.site[slice[pathlen-1].minjsite].eps);
+        path.current_gsen = -2.0*sqrt(sys.site[slice[pathlen-1].minisite].eps*sys.site[slice[pathlen-1].minjsite].eps);
     }
     path.initial_state = final_state;
     path.final_state = initial_state;
@@ -661,9 +661,8 @@ int swap_states(int irep,int jrep) {
         //  print_rc(&slice[0],path.initial_state);
         //  print_rc(&slice[len-1],path.initial_state);
         //  }
-
         if (initial_state == 3) {
-            path.current_gsen =-2. * sqrt(sys.site[slice[pathlen-1].minisite].eps*sys.site[slice[pathlen-1].minjsite].eps);
+            path.current_gsen = -2.0*sqrt(sys.site[slice[0].minisite].eps*sys.site[slice[0].minjsite].eps);
         }
         else {
             path.current_gsen = state[initial_state-1].target.energy;
@@ -682,7 +681,7 @@ int swap_states(int irep,int jrep) {
     prepj->pathlen = pathlen;
     for(j=0; j<pathlen; j++) {
         slice[j] = trial[j];  
-    //create_all_rc(&(slice[j]));
+        //create_all_rc(&(slice[j]));
     }
 
     type = analyse(slice,prepj, prepj->pathlen, path.initial_state);
@@ -716,16 +715,16 @@ int reverse_replica(int irep) {
         return 0; //reversal can only happen for trajectories who end and start in the same state
     }
 
-    int final_eps_diff=0;
+    int gsen_diff=0;
     if(path.initial_state==3) {
-        if(path.current_gsen != -2.*sqrt(sys.site[slice[path.nslices-1].minisite].eps*sys.site[slice[path.nslices-1].minjsite].eps)) {
-            final_eps_diff=1;
+        if(path.current_gsen!= -2.0*sqrt(sys.site[slice[path.nslices-1].minisite].eps*sys.site[slice[path.nslices-1].minjsite].eps)) {
+            gsen_diff=1;
         }
     }
 
-    if((path.initial_state==3) && (final_eps_diff==1)) {
+    if((path.initial_state==3)&&(gsen_diff==1)) {
         pathlen =prep->pathlen;
-        path.current_gsen = -2.*sqrt(sys.site[slice[path.nslices-1].minisite].eps*sys.site[slice[path.nslices-1].minjsite].eps);
+        path.current_gsen = -2.0*sqrt(sys.site[slice[path.nslices-1].minisite].eps*sys.site[slice[path.nslices-1].minjsite].eps);
         for(i=0;i< pathlen;i++) {
             trial[i]= slice[pathlen - 1 -  i];
             create_all_rc(&trial[i]);
@@ -733,11 +732,11 @@ int reverse_replica(int irep) {
 
         type = analyse(trial,prep,pathlen,path.initial_state);
         if ( type==0) {
-            path.current_gsen = -2.*sqrt(sys.site[slice[0].minisite].eps*sys.site[slice[0].minjsite].eps);
+            path.current_gsen = -2.0*sqrt(sys.site[slice[0].minisite].eps*sys.site[slice[0].minjsite].eps);
             return 0;
         }
         if ( type==2) {
-            path.current_gsen = -2.*sqrt(sys.site[slice[0].minisite].eps*sys.site[slice[0].minjsite].eps);
+            path.current_gsen = -2.0*sqrt(sys.site[slice[0].minisite].eps*sys.site[slice[0].minjsite].eps);
             return 0;
         }
 

@@ -20,6 +20,8 @@ double potential_energy(Slice *psl) {
     psl->energyT=0;
     psl->energyN=0;
     psl->rijdist=0;
+    psl->minisite=0;
+    psl->minjsite=0;
   
     for( ipart=0; ipart<sys.npart; ipart++ )  {
         psi = &psl->pts[ipart];
@@ -69,7 +71,9 @@ double potential_energy(Slice *psl) {
                         
                         //bewaar door welke patches de potentiele energie tot stand komt:
                         if( (isite==0) && (jsite==0)) {
-                             psl->energyT = potential_energy_attP_d;
+                            psl->energyT = potential_energy_attP_d;
+                            psl->minisite = isite;
+                            psl->minjsite = jsite;
                         }
                         else {
                             psl->energyN = potential_energy_attP_d;

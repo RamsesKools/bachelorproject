@@ -181,7 +181,7 @@ void convert_coordinates(Slice *psl )
 {
     int ipart;
 
-    //reset_center(psl);
+    reset_center(psl);
 
     for(ipart=0; ipart<sys.npart; ipart++)    {
         pos[ipart].r = psl->pts[ipart].r;
