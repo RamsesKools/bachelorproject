@@ -1,0 +1,34 @@
+Simulation
+sim_type      1
+start_type    0
+graphics      0
+ncycle1       500
+ncycle2       500
+
+Potential
+sigma         1.0
+mobilityT     1.0
+mobilityR     3.0
+epsilonP      12.0
+
+System
+npart         4
+nsites        3
+delta         20.0
+beta          1.0
+boxl          4.0
+
+Path
+timestep      0.0001
+ninter        1
+
+TIS
+nshoot        10
+nrepswap      10
+nstateswap    10
+nreverse      10
+stateswapbias 1
+fixedbias     0
+
+
+
