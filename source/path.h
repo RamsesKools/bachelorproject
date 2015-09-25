@@ -13,7 +13,7 @@
 #define MIN(a,b,tmp)    (  (tmp=a) < b  ? tmp : b )
 #define MAX(a,b,tmp)    (  (tmp=a) > b  ? tmp : b )
 #define MESSAGE(a) printf("Message:"#a"\n")
-#define SIGN(a)   ( 2*(a>0) -1) 
+#define SIGN(a)   ( 2*(a>0) -1)
 
 #define max(a,b) \
     ({ __typeof__ (a) _a = (a); \
@@ -46,10 +46,10 @@
 #define vector_divide(a,b,h)   h.x = a.x / b.x; h.y = a.y / b.y; h.z = a.z / b.z;
 #define vector_plustimes(a,b,h)   h.x += a.x * b.x; h.y += a.y * b.y; h.z += a.z * b.z;
 #define vector_mintimes(a,b,h)   h.x -= a.x * b.x; h.y -= a.y * b.y; h.z -= a.z * b.z;
-#define scalar_times(a,b,h)  h.x = a.x *b; h.y =a.y * b; h.z = a.z * b;  
-#define scalar_divide(a,b,h)  h.x = a.x /b; h.y =a.y / b; h.z = a.z / b;  
-#define scalar_plustimes(a,b,h)  h.x += a.x *b; h.y +=a.y * b; h.z += a.z * b;  
-#define scalar_mintimes(a,b,h)  h.x -= a.x *b; h.y -=a.y * b; h.z -= a.z * b;  
+#define scalar_times(a,b,h)  h.x = a.x *b; h.y =a.y * b; h.z = a.z * b;
+#define scalar_divide(a,b,h)  h.x = a.x /b; h.y =a.y / b; h.z = a.z / b;
+#define scalar_plustimes(a,b,h)  h.x += a.x *b; h.y +=a.y * b; h.z += a.z * b;
+#define scalar_mintimes(a,b,h)  h.x -= a.x *b; h.y -=a.y * b; h.z -= a.z * b;
 #define vector_add(a,b,h)  {h.x = a.x +b.x; h.y =a.y + b.y; h.z = a.z + b.z;  }
 #define vector_minus(a,b,h) { h.x = a.x - b.x; h.y =a.y - b.y; h.z = a.z - b.z;  }
 #define matrix_x_vector(m,a,h) {\
@@ -148,7 +148,7 @@ typedef struct particle_type {
 
 
 typedef struct site_type {
-    
+
     vector        r;
 
     double        eps,
@@ -165,13 +165,13 @@ typedef struct bonds_mat {
 
 
 typedef struct hist1d_type {
-            
+
     double        *bin,
                   dbin,
                   offset,
                   weight;
     int           maxbin;
-            
+
     char          name[100];
 
 } Hist1d;
@@ -187,7 +187,7 @@ typedef struct hist2d_type {
                   weight;
     int           maxbin1,
                   maxbin2;
-            
+
     char          name[100];
 
 } Hist2d;
@@ -195,7 +195,7 @@ typedef struct hist2d_type {
 
 
 typedef struct dop_type {
-    
+
     int           **flag_dop,
                   *flag_norm,
                   npaths,
@@ -203,7 +203,7 @@ typedef struct dop_type {
                   maxbin2,
                   type;
 
-    double        **dop, 
+    double        **dop,
                   ***vf,
                   **escape,
                   *norm,
@@ -259,18 +259,18 @@ typedef struct stats_type {
 typedef struct replica_type {
 
 
-    double        lambda, 
+    double        lambda,
                   weight,
                   logcrossprob,
                   lnweight,
                   dos;
-  
+
     int           pathlen,
-                  index, 
+                  index,
                   swapindex,
                   ntotal,
                   navlen,
-                  type;  
+                  type;
 
     long int      avlen,
                   avlensq;
@@ -324,7 +324,7 @@ typedef struct state_type {
                   scalefactor,
                   volume_op;
 
-    int           nrep, 
+    int           nrep,
                   type_mat[MAXREPLICA][2],
                   mstis_mat[MAXSTATES],
                   maxpaths,
@@ -340,7 +340,7 @@ typedef struct state_type {
 
 
 typedef struct langevin_type {
-  
+
     int           ninter;
 
     double        timestep,
@@ -372,8 +372,8 @@ typedef struct path_type {
                   nreplica,
                   fixedbias,
                   maxlength;
-    
-    double        scalefactor, 
+
+    double        scalefactor,
                   current_gsen,
                   enbond,
                   energy;
@@ -385,7 +385,7 @@ typedef struct path_type {
                   *fprc;
 
     Stats         block_stats[MAXSTATES][MAXREPLICA],
-                  final_stats[MAXSTATES][MAXREPLICA];       
+                  final_stats[MAXSTATES][MAXREPLICA];
 
 
 } Path;
@@ -417,7 +417,7 @@ typedef struct system_type {
                   oneover_cosdelta,
                   lambda,
                   fSE,
-                  sigma, 
+                  sigma,
                   sigmaLJ,
                   sigmaLJsq,
                   epsilonC,
@@ -431,7 +431,7 @@ typedef struct system_type {
 
 } System;
 
-                    
+
 /*---------------------------------------------------------------------------*/
 /*------------------GLOBALLY DEFINED VARIABLES-------------------------------*/
 
@@ -473,6 +473,8 @@ extern void traj_output();
 extern void traj_input();
 extern void dos_input();
 extern void dos_output();
+extern void sites_output();
+extern void sites_input();
 extern void warm_start_gen();
 
 extern void update_wanglandau();
@@ -482,6 +484,7 @@ extern void get_omiflux(Replica *);
 extern void write_swap();
 extern void write_paths();
 extern void write_errorstate(Slice *, int);
+extern void write_ratematrix();
 
 extern void conf_output(Slice *);
 extern void conf_input(Slice *);

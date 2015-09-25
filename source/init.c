@@ -34,9 +34,14 @@ void setup_simulation() {
         read_lambda();
         state_init();
         replica_init();
+
         if(sys.start_type==1) {
             traj_input();
             dos_input();
+            //sites_input();
+            //TODO: create site_inpus();
+            //read sites.inp this gives all site vectors, deltas en epsilons.
+            //sites_input();
         }
         stats_init();
 
@@ -70,15 +75,15 @@ void init_model() {
 
     sys.sqrtmobilityT = sqrt(sys.mobilityT);
     sys.sqrtmobilityR = sqrt(sys.mobilityR);
-    
+
     if(sys.nsites>0) {
         sys.site[0].r.x=0.;
         sys.site[0].r.y=0.;
         sys.site[0].r.z=1.;
-        
+
         sys.site[0].eps=sys.epsilonP;
         sys.site[0].delta=sys.delta;
-    }  
+    }
 
     //OTHER patch definitions should be done randomly
     //Possible create separate structure Site which contains: position patch, width, epsilon
@@ -89,7 +94,7 @@ void init_model() {
     for(isite=1; isite<sys.nsites; isite++) {
         do {
             overlap=0;
-            sys.site[isite].r = RandomUnitVector();   
+            sys.site[isite].r = RandomUnitVector();
             for(jsite=0; jsite<isite; jsite++) {
                 if(vector_inp(sys.site[isite].r,sys.site[jsite].r)> cos(2.0*sys.delta)) {
                     overlap=1;
@@ -99,15 +104,17 @@ void init_model() {
         } while(overlap==1);
 
         sys.site[isite].eps=sys.epsilonN;
-        sys.site[isite].delta=sys.deltaN;
+        sys.site[isite].delta=sys.delta;
         //printf("length patch vector %d: %lf\n",isite, vector_inp(sys.site[isite],sys.site[isite]));
+     }
+
+     if (sys.start_type == 0){
+        sites_output();
      }
 
 
     return;
 }
-
-
 
 
 void setup_positions(Slice *psl) {
@@ -148,7 +155,7 @@ void setup_positions(Slice *psl) {
             }
         }
     }
-    
+
 
 
     if(sys.sim_type==0) {
@@ -244,7 +251,7 @@ void read_input() {
             sscanf(pt,"%lf",&sys.epsilonC);
         } else if( strcmp(pt,"epsilonP")==0) {
             pt = strtok(NULL," ");
-            sscanf(pt,"%lf",&sys.epsilonP);     
+            sscanf(pt,"%lf",&sys.epsilonP);
         } else if( strcmp(pt,"epsilonN")==0) { //  regel toegevoegd om epsilon variabelen voor extra patches in te lezen
             pt = strtok(NULL," ");
             sscanf(pt,"%lf",&sys.epsilonN);
@@ -400,7 +407,7 @@ void state_init() {
 
 
     //keep the state as small as possible
-    state[0].target.energy = -2.0*sys.epsilonP; 
+    state[0].target.energy = -2.0*sys.epsilonP;
     state[0].volume_op = state[0].lambda[0];
     printf("Definition of bound state:\n");
     printf("         Ground-state energy:     %lf\n",state[0].target.energy);
@@ -416,7 +423,7 @@ void state_init() {
     printf("         Maximum energy boundary: %lf\n",state[1].target.energy+state[1].volume_op);
     printf("         State volume set at:     %lf\n",state[1].volume_op);
     printf("\n");
-    
+
     if(path.nstates>2) {
         state[2].volume_op = state[2].lambda[0];
         printf("Definition of non-specific state:\n");
@@ -484,13 +491,13 @@ void replica_init() {
     printf("Length initial path from target to first interface: %d slices\n",len);
 
     for( islice=0 ;islice<=len; islice++ ) {
-        slice[islice+len+1]=slice[islice];  
+        slice[islice+len+1]=slice[islice];
     }
 
     for( islice=0; islice<=len; islice++) {
         slice[len -islice] = slice[islice+len+1];
     }
-  
+
     pathlen = 2*len+2;
     printf("Total length initial path minus interface: %d slices\n",pathlen);
     for( islice=0; islice<pathlen; islice++) {
@@ -671,16 +678,16 @@ void traj_input() {
 
 	printf("\nIn traj_input()\n");
 	printf("Reading in previous trajectory\n");
- 
+
     sprintf(filename,"trajectory.inp");
     if ((fp = fopen(filename,"r"))==NULL){
         printf("input: can't open %s\n",filename);
         return;
     }
     else {
-        fscanf(fp,"%d %s",&path.nslices,dum); 
-        fscanf(fp,"%d %s",&path.current_replica,dum); 
-        fscanf(fp,"%d %s",&path.initial_state,dum); 
+        fscanf(fp,"%d %s",&path.nslices,dum);
+        fscanf(fp,"%d %s",&path.current_replica,dum);
+        fscanf(fp,"%d %s",&path.initial_state,dum);
         fscanf(fp,"%lf %lf %lf  %s",&sys.boxl.x,&sys.boxl.y,&sys.boxl.z,dum);
         for(j=0;j<path.nslices;j++) {
             for(i=0;i<sys.npart;i++){
@@ -690,7 +697,7 @@ void traj_input() {
             }
         }
         fclose(fp);
-    }  
+    }
 
 
     //retrieve all additional TIS parameters from read input
@@ -712,9 +719,9 @@ void traj_input() {
     for(i=0;i<path.nslices;i++) {
         psl = &(slice[i]);
         create_all_rc(psl);
-        printf("Slice %d  op %lf state %d energyT %lf rijdist %lf energyN %lf energy %lf inwindow %d\n", 
-         i, 
-         psl->order_parameter, 
+        printf("Slice %d  op %lf state %d energyT %lf rijdist %lf energyN %lf energy %lf inwindow %d\n",
+         i,
+         psl->order_parameter,
          in_state(psl),
          psl->energyT,
          psl->rijdist,
@@ -743,7 +750,7 @@ void traj_input() {
     printf("       current replica:        %d\n",path.current_replica);
     printf("       current gsen:           %lf\n",path.current_gsen);
     printf("       type of path:           %d\n",type);
-        
+
 	printf("Done with traj_input\n\n");
 
     return;
@@ -755,20 +762,20 @@ void traj_output() {
 
     FILE *fp;
     char filename[240];
-    int i,j; 
+    int i,j;
     Replica *prep;
 
     prep = replica[path.current_replica];
-  
+
     sprintf(filename,"trajectory.out");
     if ((fp = fopen(filename,"w"))==NULL) {
         printf("output: can't open %s\n",filename);
         return;
     }
     else {
-        fprintf(fp,"%d slices\n",prep->pathlen); 
-        fprintf(fp,"%d current_replica\n",path.current_replica); 
-        fprintf(fp,"%d initial_state\n",path.initial_state); 
+        fprintf(fp,"%d slices\n",prep->pathlen);
+        fprintf(fp,"%d current_replica\n",path.current_replica);
+        fprintf(fp,"%d initial_state\n",path.initial_state);
         fprintf(fp,"%.16lf %.16lf %.16lf boxl,dr\n",sys.boxl.x,sys.boxl.y,sys.boxl.z);
         for(j=0;j<path.nslices;j++) {
             for(i=0;i<sys.npart;i++){
@@ -779,7 +786,7 @@ void traj_output() {
         }
         fclose(fp);
     }
-	
+
     return;
 }
 
@@ -792,14 +799,14 @@ void dos_input() {
 
     FILE *fp;
     char filename[30];
-    int i,j,idum; 
+    int i,j,idum;
 
     //Wang-Landau Dos
     sprintf(filename,"dos_all.inp");
     if ((fp = fopen(filename,"r"))==NULL){
         printf("output: can't open %s\n",filename);
         return;
-    } 
+    }
     else {
         printf("reading dos data\n");
         for(i=0;i<path.nstates;i++) {
@@ -826,7 +833,7 @@ void dos_output() {
 
 	FILE *fp;
     int i,j;
-	
+
     if ((fp = fopen("dos_all.dat","w"))==NULL){
         printf("output: can't open file.dat\n");
         return;
@@ -857,12 +864,68 @@ void dos_output() {
         fclose(fp);
     }
 
-	
+
     return;
 }
 
+void sites_output(){
+    FILE *fp;
+    int i;
 
+    if ((fp = fopen("sites_setup.out","w"))==NULL){
+        printf("output:can't open sites_setup.dat\n");
+        return;
+    }
 
+    else {
+        fprintf(fp, "x_site y_site z_site eps_site delta_site \n");
+        for(i=0; i<sys.nsites; i++) {
+            fprintf(fp, "%lf %lf %lf %lf %lf\n",
+                sys.site[i].r.x,
+                sys.site[i].r.y,
+                sys.site[i].r.z,
+                sys.site[i].eps,
+                sys.site[i].delta);
+        }
+        fprintf(fp, "\n");
+        fclose(fp);
+    }
+
+    return;
+}
+
+void sites_input(){
+
+    FILE *fp;
+    char filename[30];
+    int i,j,idum;
+
+    //reads sites variables
+    sprintf(filename,"sites_setup.inp");
+    if ((fp = fopen(filename,"r"))==NULL){
+        printf("can't open sites variable input file %s\n",filename);
+        return;
+    }
+    else {
+        printf("reading sites variables\n");
+        // skip first line, since it is a header
+        char buffer[100];
+        fgets(buffer, 100, fp);
+
+        for(i=0;i<sys.nsites;i++) {
+            fscanf(fp,"%lf %lf %lf %lf %lf \n",
+                &sys.site[i].r.x,
+                &sys.site[i].r.y,
+                &sys.site[i].r.z,
+                &sys.site[i].eps,
+                &sys.site[i].delta);
+        }
+        fscanf(fp, "\n");
+        fclose(fp);
+    }
+
+    return;
+}
 
 
 void warm_start_gen() {

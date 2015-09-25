@@ -58,13 +58,13 @@ void tiscycle() {
     int i,j,iwhich,irep,jrep,drep;
     double en;
 
-    for(i=0;i<(path.nshoot+path.nrepswap+path.nreverse+path.nswapstates);i++) {  
+    for(i=0;i<(path.nshoot+path.nrepswap+path.nreverse+path.nswapstates);i++) {
         iwhich = (int)(RandomNumber()*(path.nshoot+path.nrepswap+path.nreverse+path.nswapstates));
         if (iwhich<path.nshoot) {
             j= path.current_replica;
             shoot_oneway(replica[j]);
-        } 
-        else if(iwhich<(path.nshoot + path.nrepswap)) {  
+        }
+        else if(iwhich<(path.nshoot + path.nrepswap)) {
             irep=  path.current_replica;
             drep =2*((int)(2*RandomNumber()))-1;
             if (abs(drep)!= 1) {
@@ -72,13 +72,13 @@ void tiscycle() {
             }
             jrep= irep+drep;
             swap_replica(irep,jrep);
-        } 
+        }
         else if(iwhich<(path.nshoot+path.nrepswap+path.nswapstates)) {
             irep = path.current_replica;
             swap_states(irep,jrep);
-        } 
+        }
         else if(iwhich < (path.nshoot + path.nrepswap + path.nswapstates + path.nreverse)) {
-            irep=path.current_replica; 
+            irep=path.current_replica;
             reverse_replica(irep);
         }
         crossinghistogram(replica[path.current_replica]);
@@ -93,7 +93,7 @@ void tiscycle() {
 void printstatustis() {
 
     int istate,jstate;
-  
+
     istate=in_state(&slice[0]);
     jstate=in_state(&slice[path.nslices-1]);
 
@@ -111,7 +111,7 @@ void bmdcycle() {
 
     propagate_bd(&slice[0]);
     if(sys.npart==1) {
-        sampleangles(0); 
+        sampleangles(0);
         samplediffusion(0);
     }
 
@@ -169,7 +169,7 @@ void printstatusbmd() {
 void terminate_block() {
 
     int i=0,j=0,k=0,istate=0,irep=0,iaver=0;
-    
+
     if(sys.sim_type==1) {
         printf("Updating block averages\n");
         for(istate=0; istate<path.nstates; istate++) {
@@ -182,7 +182,7 @@ void terminate_block() {
         print_pathacceptances();
         print_pathnumbers();
     }
-   
+
     else if(sys.sim_type==0) {
         printstatusbmd();
         conf_output(&slice[0]);
@@ -199,7 +199,7 @@ void terminate_block() {
             }
         }
 
- 
+
  		for(istate=0; istate<path.nstates; istate++) {
 			for(irep=0; irep<state[istate].nrep; irep++) {
 			    for(k=0; k<NACC; k++) {
@@ -234,6 +234,9 @@ void finalstat() {
     print_finpathacceptances();
     print_pathnumbers();
 
+    //TODO check if write_ratematrix() works
+    write_ratematrix();
+
     if(sys.sim_type==1) {
         print_tisstats();
         reweight_crosshist();
@@ -242,7 +245,7 @@ void finalstat() {
 
     if(sys.sim_type==0) {
         if(sys.npart==1) {
-            sampleangles(1); 
+            sampleangles(1);
             samplediffusion(1);
         }
     }
@@ -265,7 +268,7 @@ void print_pathacceptances() {
             for(k=0; k<NACC; k++) {
                 for(irep=0; irep<state[istate].nrep; irep++) {
                     if(path.block_stats[istate][irep].mcacc[k].tries>0) {
-                        path.block_stats[istate][irep].mcacc[k].ratio = 
+                        path.block_stats[istate][irep].mcacc[k].ratio =
                             (double)path.block_stats[istate][irep].mcacc[k].acc/(double)path.block_stats[istate][irep].mcacc[k].tries;
                     }
                     printf("%7d accepted %sout of %7d trial moves, ratio = %g\n",
@@ -279,11 +282,11 @@ void print_pathacceptances() {
         }
 
   	    printf("\nSlice number averages\n");
-        for (k=0;k<MAXREPLICA;k++) { 
-            printf("     Path length replica %2d ",k); 
-            for (i=0;i<path.nstates;i++) { 
+        for (k=0;k<MAXREPLICA;k++) {
+            printf("     Path length replica %2d ",k);
+            for (i=0;i<path.nstates;i++) {
                 printf("%6.1lf ",(double) path.block_stats[i][k].aver[1].sum);
-            } 
+            }
             printf("\n");
         }
     }
@@ -302,7 +305,7 @@ void print_finpathacceptances() {
             for(k=0; k<NACC; k++) {
                 for(irep=0; irep<state[istate].nrep; irep++) {
                     if(path.final_stats[istate][irep].mcacc[k].tries>0) {
-                        path.final_stats[istate][irep].mcacc[k].ratio = 
+                        path.final_stats[istate][irep].mcacc[k].ratio =
                             (double)path.final_stats[istate][irep].mcacc[k].acc/(double)path.final_stats[istate][irep].mcacc[k].tries;
                     }
                     printf("%7d accepted %sout of %7d trial moves, ratio = %g\n",
@@ -316,11 +319,11 @@ void print_finpathacceptances() {
         }
 
   	    printf("\nSlice number averages\n");
-        for (k=0;k<MAXREPLICA;k++) { 
-            printf("     Path length replica %2d ",k); 
-            for (i=0;i<path.nstates;i++) { 
+        for (k=0;k<MAXREPLICA;k++) {
+            printf("     Path length replica %2d ",k);
+            for (i=0;i<path.nstates;i++) {
                 printf("%6.1lf ",(double) path.final_stats[i][k].aver[1].sum);
-            } 
+            }
             printf("\n");
         }
     }
@@ -335,29 +338,29 @@ void print_pathnumbers() {
 
     if(sys.sim_type==1) {
         printf("\nPathlength averages        ");
-        for (i=1;i<=path.nstates;i++) { 
+        for (i=1;i<=path.nstates;i++) {
             printf("%6d ",i);
         }
         printf("\n");
 
-        for (k=0;k<MAXREPLICA;k++) { 
-            printf("     Path length replica %2d ",k); 
-            for (i=0;i<path.nstates;i++) { 
+        for (k=0;k<MAXREPLICA;k++) {
+            printf("     Path length replica %2d ",k);
+            for (i=0;i<path.nstates;i++) {
                 printf("%6.1lf ",(double) state[i].srep[k].avlen/(double)state[i].srep[k].navlen);
             }
             printf("\n");
         }
 
         printf("\nPathtype averages        ");
-        for (i=1;i<=path.nstates;i++) { 
+        for (i=1;i<=path.nstates;i++) {
             printf("  %d->%d  %d->j",i,i,i);
         }
         printf("\n");
 
-        for (k=0;k<MAXREPLICA;k++) { 
-            printf("     Path type replica %2d ",k); 
-            for (i=0;i<path.nstates;i++) { 
-                for (j=0;j<2;j++) { 
+        for (k=0;k<MAXREPLICA;k++) {
+            printf("     Path type replica %2d ",k);
+            for (i=0;i<path.nstates;i++) {
+                for (j=0;j<2;j++) {
                     printf("%5d ", state[i].type_mat[k][j]);
                 }
             }
@@ -366,41 +369,41 @@ void print_pathnumbers() {
 
 
         printf("\nMSTIS matrix  ");
-        for (i=0;i<path.nstates;i++) { 
+        for (i=0;i<path.nstates;i++) {
             printf("    %2d",i+1);
         }
         printf("\n");
         for (i=0;i<path.nstates;i++) {
             ntot[i]=0;
         }
-        for (k=0;k<path.nstates;k++) { 
-            printf("     state  %2d ",k+1); 
-            for (i=0;i<path.nstates;i++) { 
+        for (k=0;k<path.nstates;k++) {
+            printf("     state  %2d ",k+1);
+            for (i=0;i<path.nstates;i++) {
                 printf("%5d ", state[i].mstis_mat[k]);
                 ntot[i]+=state[i].mstis_mat[k];
             }
-            printf("\n");   
+            printf("\n");
         }
   	    printf("     total     ");
         for (i=0;i<path.nstates;i++) printf("%5d ",  ntot[i]);
-        printf("\n"); 
+        printf("\n");
 
         printf("\nNormalized matrix   ");
-        for (i=0;i<path.nstates;i++) { 
+        for (i=0;i<path.nstates;i++) {
             printf("%2d      ",i+1);
         }
         printf("\n");
-        for (k=0;k<path.nstates;k++) { 
-            printf("     state  %2d ",k+1); 
-            for (i=0;i<path.nstates;i++) { 
+        for (k=0;k<path.nstates;k++) {
+            printf("     state  %2d ",k+1);
+            for (i=0;i<path.nstates;i++) {
                 printf("%6.5lf ", (double)state[i].mstis_mat[k]/ ntot[i]);
             }
             printf("\n");
         }
 
-  	    
+
         printf("\nFluxes     0        1     total     flux\n");
-        for (i=0;i<path.nstates;i++) { 
+        for (i=0;i<path.nstates;i++) {
             f0 = (double) state[i].flux0/ state[i].nflux0;
             f1 = (double) state[i].flux1/ state[i].nflux1;
             flux[i]=  1./(f0+f1);
@@ -410,26 +413,26 @@ void print_pathnumbers() {
         printf("\n");
 
         printf("\nCrossing prob from dos at last replica for state 1 and state 2: %d and %d\n",state[0].nrep-1,state[1].nrep-1);
-        for (i=0;i<path.nstates;i++) { 
+        for (i=0;i<path.nstates;i++) {
             nrep = state[i].nrep;
             printf("%2d      ",i+1);
-            printf("%7.2lf %7.2lf %12.5g \n", 
+            printf("%7.2lf %7.2lf %12.5g \n",
               state[i].srep[nrep-1].dos, state[i].srep[nrep-1].dos-state[i].srep[1].dos, exp(state[i].srep[nrep-1].dos-state[i].srep[1].dos));
         }
         printf("\n");
 
         printf("\nRate matrix   ");
-        for (i=0;i<path.nstates;i++) { 
+        for (i=0;i<path.nstates;i++) {
             printf("%2d      ",i+1);
         }
         printf("\n");
-        for (k=0;k<path.nstates;k++) { 
-            printf("     state  %2d ",k+1); 
-            for (i=0;i<path.nstates;i++) { 
+        for (k=0;k<path.nstates;k++) {
+            printf("     state  %2d ",k+1);
+            for (i=0;i<path.nstates;i++) {
                 nrep = state[i].nrep;
                 state[i].rate[k] =  exp(state[i].srep[nrep-1].dos-state[i].srep[1].dos)*flux[i]*state[i].mstis_mat[k]/ ntot[i];
                 printf("%12.5g ", (double)state[i].rate[k]);
-            }  
+            }
             printf("\n");
         }
 
@@ -439,10 +442,28 @@ void print_pathnumbers() {
 
 
     fflush(NULL);
- 
+
     return;
 }
 
+void write_ratematrix() {
+    FILE *fp;
+    int i,j;
 
+    if ((fp = fopen("rate_matrix.dat","w"))==NULL){
+        printf("output:can't open rate_matrix.dat\n");
+        return;
+    }
 
+    else {
+        for (j=0;j<path.nstates;j++) {
+            for (i=0;i<path.nstates;i++) {
+                fprintf(fp, "%12.5g ", state[i].rate[j]);
+            }
+        fprintf(fp, "\n");
+        }
+        fclose(fp);
+    }
 
+    return;
+}
