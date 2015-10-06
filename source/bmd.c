@@ -8,11 +8,11 @@
 
 
 
-double potential_energy(Slice *psl) { 
+double potential_energy(Slice *psl) {
 
     Pts *psi,*psj;
     vector rij,p[sys.npart][sys.nsites],ui,uj,rnorm;
-    double r2,r6,r6inv,r12inv,potential_energy,potential_energy_attP=0,potential_energy_attC=0,potential_energy_rep=0,potential_energy_attP_d=0,r,cositheta,cosjtheta;
+    double r2,r6,r6inv,r12inv,potential_energy,potential_energy_attP=0,potential_energy_attC=0,potential_energy_rep=0,potential_energy_attP_d=0,r,cositheta,cosjtheta,epsmix;
     double phi_i,phi_j;
     int ipart,jpart,isite,jsite;
     tensor rotmati,rotmatj;
@@ -22,12 +22,12 @@ double potential_energy(Slice *psl) {
     psl->rijdist=0;
     psl->minisite=0;
     psl->minjsite=0;
-  
+
     for( ipart=0; ipart<sys.npart; ipart++ )  {
         psi = &psl->pts[ipart];
         rotmati = getrotmatrix(psi->q);
         for( isite=0; isite<sys.nsites; isite++) {
-            matrix_x_vector(rotmati,sys.site[isite].r,p[ipart][isite]); 
+            matrix_x_vector(rotmati,sys.site[isite].r,p[ipart][isite]);
         }
     }
     //calculate Lennard-Jones interaction between all particles
@@ -44,16 +44,16 @@ double potential_energy(Slice *psl) {
                 r6inv=1.0/r6;
                 r12inv = r6inv*r6inv;
                 if(r2<sys.sigmaLJsq) {
-                    potential_energy_rep = r12inv-r6inv+0.25; 
+                    potential_energy_rep = r12inv-r6inv+0.25;
                 }
                 //calculate isotropic potential
-                //potential_energy_attC += r12inv-r6inv; 
+                //potential_energy_attC += r12inv-r6inv;
                 r=sqrt(r2);
                 psl->rijdist = r;
                 scalar_divide(rij,r,rnorm);
                 //calculate angular part of potential
                 for( isite=0; isite<sys.nsites; isite++ ) {
-                    cositheta=-vector_inp(rnorm,p[ipart][isite]); 
+                    cositheta=-vector_inp(rnorm,p[ipart][isite]);
                     if(cositheta<sys.cosdelta) {
                         continue;
                     }
@@ -63,12 +63,13 @@ double potential_energy(Slice *psl) {
                         if(cosjtheta<sys.cosdelta) {
                             continue;
                         }
-                        
+
                         phi_j=0.5*(1.0-cos(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta));
                         //Berthelot mixing rule is used for determining epsilon
-                        //potential_energy_attP_d = 4.0*phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps); 
-                        potential_energy_attP_d = -4.0 * phi_i * phi_j * r6inv * sqrt(sys.site[isite].eps * sys.site[jsite].eps); 
-                        
+                        epsmix = sqrt(sys.site[isite].eps * sys.site[jsite].eps);
+                        //potential_energy_attP_d = 2.0*phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps);
+                        potential_energy_attP_d = -2.0 * phi_i * phi_j * r6inv * epsmix;
+
                         //bewaar door welke patches de potentiele energie tot stand komt:
                         if( (isite==0) && (jsite==0)) {
                             psl->energyT = potential_energy_attP_d;
@@ -80,7 +81,7 @@ double potential_energy(Slice *psl) {
                             psl->minisite = isite;
                             psl->minjsite = jsite;
                         }
-                        potential_energy_attP_d = 4.0*phi_i*phi_j*(r12inv - r6inv)*sqrt(sys.site[isite].eps * sys.site[jsite].eps); 
+                        potential_energy_attP_d = 4.0*phi_i*phi_j*(r12inv - r6inv)*epsmix;
 
                         potential_energy_attP += potential_energy_attP_d;
 
@@ -91,7 +92,7 @@ double potential_energy(Slice *psl) {
     }
 
     potential_energy_rep*=4.0;
-    
+
     //potential_energy_attP*=4.0;//*sys.epsilonP; // dit wordt nu in de loop al gedaan
 
     //potential_energy_attC*=4.0*sys.epsilonC;
@@ -113,7 +114,7 @@ void calculate_forces(Slice *psl) {
     double phi_i,phi_j,fmag,fmagP,fmagrinv,UmagP,epsmix;
     int ipart,jpart,isite,jsite;
     tensor rotmati,rotmatj;
-    
+
     //initialize all forces to zero
 
     for( ipart=0; ipart<sys.npart; ipart++ )  {
@@ -139,7 +140,7 @@ void calculate_forces(Slice *psl) {
                 r2inv=1.0/r2;
                 r6inv=r2inv*r2inv*r2inv;
                 r12inv = r6inv*r6inv;
-                
+
                 if(r2<sys.sigmaLJsq) {
                     fmag = r2inv*(48.*r12inv - 24.*r6inv);
                     scalar_plustimes(rij,fmag,psi->f);
@@ -166,7 +167,7 @@ void calculate_forces(Slice *psl) {
                     //calculate phi for particle i
                     phi_i=0.5*(1.0-cos(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta));
                     //printf("phi_i %d %lf\n",ipart, phi_i);
-                    
+
                     for( jsite=0; jsite<sys.nsites; jsite++ ) {
                         cosjtheta=vector_inp(rnorm,p[jpart][jsite]);
                         if(cosjtheta<sys.cosdelta) {
@@ -179,7 +180,7 @@ void calculate_forces(Slice *psl) {
                         phi_j=0.5*(1.0-cos(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta));
                         //printf("phi_j %d %lf\n",jpart, phi_j);
 
-                        fmagP = fmag*phi_i*phi_j*epsmix; 
+                        fmagP = fmag*phi_i*phi_j*epsmix;
                         //printf("fmagP attraction %lf\n", fmagP);
                         scalar_plustimes(rij,fmagP,psi->f);
                         scalar_mintimes(rij,fmagP,psj->f);
@@ -191,7 +192,7 @@ void calculate_forces(Slice *psl) {
                         vector_cross(rnorm,rcrosspj,pjperpr);
 
                         //CALCULATE DEL U / DEL COSTHETA
-                        fmag = UmagP*phi_j*HALFPI*sin(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta*epsmix; 
+                        fmag = UmagP*phi_j*HALFPI*sin(PI*(cositheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta*epsmix;
                         //printf("fmag due to patch i %lf\n", fmag);
                         fmagrinv=fmag*rinv;
                         scalar_mintimes(piperpr,fmagrinv,psi->f);
@@ -201,14 +202,14 @@ void calculate_forces(Slice *psl) {
 
                         scalar_mintimes(rcrosspi,fmag,psi->t);
 
-                        fmag = UmagP*phi_i*HALFPI*sin(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta*epsmix; 
+                        fmag = UmagP*phi_i*HALFPI*sin(PI*(cosjtheta-sys.cosdelta)*sys.oneover_cosdelta)*sys.oneover_cosdelta*epsmix;
                         //printf("fmag due to patch j %lf\n", fmag);
                         fmagrinv=fmag*rinv;
                         scalar_plustimes(pjperpr,fmagrinv,psi->f);
                         scalar_mintimes(pjperpr,fmagrinv,psj->f);
 
                         scalar_plustimes(rcrosspj,fmag,psj->t);
-                        
+
                         //printf("torque %d %lf %lf %lf\n",ipart,psi->t.x,psi->t.y,psi->t.z);
                         //printf("torque %d %lf %lf %lf\n",jpart,psj->t.x,psj->t.y,psj->t.z);
                     }
@@ -256,7 +257,7 @@ void propagate_bd(Slice *psl)  {
 
             //rotational part
             //get matrices for q(t)
-            rotmat = getrotmatrix(psi->q); 
+            rotmat = getrotmatrix(psi->q);
             Bmat = getquatmatrix(psi->q);
 
             //Baalpha * (muR) * rotmatA * torque * delt = qu1
@@ -317,7 +318,7 @@ tensor getrotmatrix(quaternion q) {
 
     mat.x.x = q0sq + q1sq - q2sq - q3sq ;  mat.x.y = 2.0*(q1*q2 - q0*q3)       ;  mat.x.z = 2.0*(q1*q3 + q0*q2)       ;
     mat.y.x = 2.0*(q1*q2 + q0*q3)       ;  mat.y.y = q0sq - q1sq + q2sq - q3sq ;  mat.y.z = 2.0*(q2*q3 - q0*q1)       ;
-    mat.z.x = 2.0*(q1*q3 - q0*q2)       ;  mat.z.y = 2.0*(q2*q3 + q0*q1)       ;  mat.z.z = q0sq - q1sq - q2sq + q3sq ; 
+    mat.z.x = 2.0*(q1*q3 - q0*q2)       ;  mat.z.y = 2.0*(q2*q3 + q0*q1)       ;  mat.z.z = q0sq - q1sq - q2sq + q3sq ;
 
     return mat;
 }
@@ -371,7 +372,7 @@ double langrange_multiplier_quat(quaternion qprime, quaternion q) {
 
     //go for minimum for now...makes more sense
     //if this does not work try just renormalizing it...
-    
+
     if(fabs(root1)<fabs(root2)) {
         lambdaq=root1;
     }

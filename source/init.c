@@ -407,7 +407,7 @@ void state_init() {
 
 
     //keep the state as small as possible
-    state[0].target.energy = -2.0*sys.epsilonP;
+    state[0].target.energy = -1.*sys.epsilonP;
     state[0].volume_op = state[0].lambda[0];
     printf("Definition of bound state:\n");
     printf("         Ground-state energy:     %lf\n",state[0].target.energy);
