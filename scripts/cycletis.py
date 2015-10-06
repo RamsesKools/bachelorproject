@@ -55,15 +55,16 @@ def warmstartgen():
 
 
 for Eps in prm.eps:
-    fdir = 'feps'+str(Eps)
+    fdir = 'eps'+str(Eps)
     ensure_dir(fdir)
     os.chdir(fdir)
     for Delta in prm.delta:
-        fdir = 'fdelta' + str(Delta)
+        fdir = 'delta' + str(Delta)
         ensure_dir(fdir)
         os.chdir(fdir)
         os.system("cp ../../param.py ../../write_input_file.py ../../bmd.run ../../submit.job .")
 
+        #change type to 1 if you run warm start
         Type=0
         warmsucces=0
         if(Type==1):
@@ -71,8 +72,11 @@ for Eps in prm.eps:
         if((warmsucces) or (Type==0)):
             wif.write_input(Type, prm.Ncycle1, prm.Ncycle2, Eps, Delta, prm.Nsites)
             prm.create_lambda_file(Eps, "lambda_b.inp")
+            prm.create_lambda_file(Eps, "lambda_n.inp")
             prm.create_lambda_u()
+            #also create lambda_n if more than 1 patch is added
             #os.system("qsub submit.job")
+            os.system('./bmd.run > logfile.dat')
         os.system("pwd")
         os.chdir('..')
 
